@@ -10,7 +10,8 @@ def load_real_data():
     """Load data from GitHub"""
     url = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/main/WorldindexsSpecsPrices2.csv"
     try:
-        data = pd.read_csv(url, index_col=0, parse_dates=True)
+        # Use semicolon as separator and comma as decimal for European-style CSVs
+        data = pd.read_csv(url, sep=";", decimal=",", index_col=0, parse_dates=True)
         # Select and rename relevant columns to match sample structure
         column_mapping = {
             'SPX Index': 'S&P_500',
@@ -209,3 +210,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
