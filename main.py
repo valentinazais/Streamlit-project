@@ -5,8 +5,30 @@ from datetime import datetime, timedelta
 
 st.set_page_config(page_title="Cross-Asset Market Regime Monitor", layout="wide")
 
+@st.cache_data
+def load_real_data():
+    """Load data from GitHub"""
+    url = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/main/WorldindexsSpecsPrices2.csv"
+    try:
+        data = pd.read_csv(url, index_col=0, parse_dates=True)
+        # Select and rename relevant columns to match sample structure
+        column_mapping = {
+            'SPX Index': 'S&P_500',
+            'GX1 Index': 'Gold',
+            'BZ1 Index': 'Crude_Oil',
+            'DX1 Index': 'USD_Index',
+            'VG1 Index': 'VIX'
+        }
+        selected_columns = list(column_mapping.keys())
+        data = data[selected_columns].rename(columns=column_mapping)
+        return data
+    except Exception as e:
+        st.error(f"Failed to load data from GitHub: {e}")
+        # Fallback to sample data if loading fails
+        return create_sample_data()
+
 def create_sample_data():
-    """Generate sample data for testing"""
+    """Generate sample data for testing (fallback)"""
     dates = pd.date_range(start='2023-01-01', end='2024-09-19', freq='D')
     
     # Sample price data
@@ -26,10 +48,10 @@ def create_sample_data():
 
 def main():
     st.title("Cross-Asset Market Regime Monitor")
-    st.markdown("*Demo version with sample data*")
+    st.markdown("*Using real data from GitHub*")
     
-    # Generate sample data
-    data = create_sample_data()
+    # Load real data (with fallback to sample)
+    data = load_real_data()
     
     # Sidebar
     st.sidebar.header("Filters")
@@ -182,7 +204,7 @@ def main():
     
     # Footer
     st.markdown("---")
-    st.markdown("*Data updates daily. This is a demo version with simulated data.*")
+    st.markdown("*Data updates daily. Using real data from GitHub.*")
     st.markdown("**Features:** Real-time regime detection • Multi-asset monitoring • Term structure analysis")
 
 if __name__ == "__main__":
