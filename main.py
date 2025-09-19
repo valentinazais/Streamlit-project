@@ -17,7 +17,6 @@ def load_real_data():
             'SPX Index': 'S&P_500',
             'GX1 Index': 'Gold',
             'BZ1 Index': 'Crude_Oil',
-            'DX1 Index': 'USD_Index',
             'VG1 Index': 'VIX'
         }
         selected_columns = list(column_mapping.keys())
@@ -210,4 +209,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
