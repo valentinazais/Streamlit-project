@@ -13,14 +13,16 @@ def load_real_data():
         # Use semicolon as separator and comma as decimal for European-style CSVs
         data = pd.read_csv(url, sep=";", decimal=",", index_col=0, parse_dates=True)
         # Select and rename relevant columns to match sample structure
+        # Note: Removed 'DX1 Index' as it doesn't exist in the dataset (based on your feedback)
         column_mapping = {
             'SPX Index': 'S&P_500',
             'GX1 Index': 'Gold',
             'BZ1 Index': 'Crude_Oil',
             'VG1 Index': 'VIX'
         }
-        selected_columns = list(column_mapping.keys())
-        data = data[selected_columns].rename(columns=column_mapping)
+        # Only select columns that actually exist in the data
+        existing_columns = [col for col in column_mapping.keys() if col in data.columns]
+        data = data[existing_columns].rename(columns={col: column_mapping[col] for col in existing_columns})
         return data
     except Exception as e:
         st.error(f"Failed to load data from GitHub: {e}")
@@ -209,5 +211,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
