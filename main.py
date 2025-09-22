@@ -75,6 +75,8 @@ def load_real_data():
     
     # Ensure index is datetime
     data.index = pd.to_datetime(data.index)
+
+    data = data[data.index.notna()]
     
     return data
 
@@ -282,3 +284,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
