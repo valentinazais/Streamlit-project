@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Cross-Asset Market Regime Monitor", layout="wide")
 
@@ -294,10 +292,9 @@ def main():
         returns = compute_returns(filtered_data[selected_assets])
         corr_matrix = compute_correlation_matrix(returns)
         
-        # Display as heatmap
-        fig, ax = plt.subplots(figsize=(10, 8))
-        sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', ax=ax)
-        st.pyplot(fig)
+        # Display as styled dataframe with background gradient (heatmap-like)
+        styled_corr = corr_matrix.style.background_gradient(cmap='coolwarm', axis=None).format("{:.2f}")
+        st.dataframe(styled_corr, use_container_width=True)
     else:
         st.warning("Select at least two assets to compute correlation matrix.")
     
