@@ -24,7 +24,7 @@ TICKERS = {
         'INDU Index', 'NDX Index', 'SPX Index', 'CAC Index'
     ],
     'Fixed Income': [
-        'GB3 GOV', 'GB6 GOV', 'GB12 GOV', 'GT2 GOV', 'GT5 GOV', 'GT10 GOV', 'GT30 GOV'
+        'GB3 Govt', 'GB6 Govt', 'GB12 Govt', 'GT2 Govt', 'GT5 Govt', 'GT10 Govt', 'GT30 Govt'
     ]
 }
 
@@ -395,3 +395,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
