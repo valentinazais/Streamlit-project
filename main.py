@@ -28,6 +28,9 @@ TICKERS = {
     ]
 }
 
+# US Treasury tickers (assuming GT* are US Treasuries)
+US_TREASURY_TICKERS = [t for t in TICKERS['Fixed Income'] if t.startswith('GT')]
+
 # Flatten all tickers for easy access
 ALL_TICKERS = [ticker for group in TICKERS.values() for ticker in group]
 
@@ -212,20 +215,46 @@ def main():
                 else:
                     st.metric(asset.replace('_', ' '), "N/A", "N/A")
     
-    # Yield curves (using fixed income data if available) - Only US Treasury
+    # Yield curves (only US Treasury, with date selector)
     st.header("Bond Yield Curves")
     
     st.subheader("US Treasury Yields")
-    treasury_tickers = TICKERS['Fixed Income']
-    if any(t in filtered_data.columns for t in treasury_tickers):
-        # Get latest yields
-        latest_yields = filtered_data[treasury_tickers].iloc[-1].dropna()
-        if not latest_yields.empty:
-            maturities = [t.split(':')[0] for t in latest_yields.index]  # e.g., 'GB3', 'GT10'
-            us_data = pd.DataFrame({'Yield': latest_yields.values}, index=maturities)
-            st.line_chart(us_data)
+    if US_TREASURY_TICKERS and any(t in data.columns for t in US_TREASURY_TICKERS):
+        # Date selector for yield curve
+        yc_date = st.date_input(
+            "Select Date for Yield Curve",
+            value=max_date,
+            min_value=min_date,
+            max_value=max_date,
+            key="yc_date"
+        )
+        
+        # Convert to datetime
+        yc_datetime = datetime.combine(yc_date, datetime.min.time())
+        
+        # Find the closest date in the index (nearest previous if not exact)
+        if yc_datetime in data.index:
+            selected_yields = data.loc[yc_datetime, US_TREASURY_TICKERS].dropna()
         else:
-            st.warning("No US Treasury yield data available.")
+            # Get the nearest previous date
+            prev_dates = data.index[data.index <= yc_datetime]
+            if not prev_dates.empty:
+                nearest_date = prev_dates.max()
+                selected_yields = data.loc[nearest_date, US_TREASURY_TICKERS].dropna()
+            else:
+                selected_yields = pd.Series()
+        
+        if not selected_yields.empty:
+            # Extract maturities (e.g., '2' from 'GT2:GOV', '10' from 'GT10:GOV')
+            maturities = [t.replace('GT', '').replace(':GOV', '') + 'Y' for t in selected_yields.index]
+            yc_data = pd.DataFrame({'Yield': selected_yields.values}, index=maturities)
+            
+            # Sort by maturity (assuming numerical years)
+            yc_data = yc_data.sort_index(key=lambda x: pd.to_numeric(x.str.rstrip('Y')))
+            
+            st.line_chart(yc_data)
+        else:
+            st.warning(f"No US Treasury yield data available for {yc_date} or nearest previous date.")
     else:
         st.warning("No US Treasury yield data available.")
     
