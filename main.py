@@ -5,31 +5,67 @@ from datetime import datetime, timedelta
 
 st.set_page_config(page_title="Cross-Asset Market Regime Monitor", layout="wide")
 
-def create_sample_data():
-    """Generate sample data for testing"""
-    dates = pd.date_range(start='2023-01-01', end='2024-09-19', freq='D')
+# Define the GitHub raw URLs for the TSV files
+COMMODITIES_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/Commodities_2Y.tsv"
+FOREX_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/Forex_2Y.tsv"
+FIXED_INCOME_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/FixedIncome_2Y.tsv"
+INDICES_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/Indices_2Y.tsv"
+
+def load_real_data():
+    """Load real data from TSV files on GitHub and combine relevant assets"""
+    # Load each TSV file (assuming they have 'Date' as the first column and asset names as columns)
+    # Parse dates and set index
+    commodities_df = pd.read_csv(COMMODITIES_URL, sep='\t', parse_dates=['Date'], index_col='Date')
+    forex_df = pd.read_csv(FOREX_URL, sep='\t', parse_dates=['Date'], index_col='Date')
+    indices_df = pd.read_csv(INDICES_URL, sep='\t', parse_dates=['Date'], index_col='Date')
+    # FixedIncome not needed for the main assets, but loaded if required later
+    # fixed_income_df = pd.read_csv(FIXED_INCOME_URL, sep='\t', parse_dates=['Date'], index_col='Date')
     
-    # Sample price data
-    np.random.seed()
-    data = {}
+    # Extract specific columns based on user's mapping
+    # Assuming:
+    # - 'SPX Index' is in Indices
+    # - 'XAUUSD Curncy' might be in Forex or Commodities (I'll check Forex first, fallback to Commodities)
+    # - 'CL1 Comdty' is in Commodities
+    # For now, forgetting USD_Index and VIX
     
-    # Generate sample asset prices
-    assets = ['S&P_500', 'Gold', 'Crude_Oil', 'USD_Index', 'VIX']
-    base_prices = [4000, 2000, 80, 100, 20]
+    data = pd.DataFrame()
     
-    for i, asset in enumerate(assets):
-        returns = np.random.normal(0.0005, 0.02, len(dates))
-        prices = base_prices[i] * np.exp(np.cumsum(returns))
-        data[asset] = prices
+    if 'SPX Index' in indices_df.columns:
+        data['SPX Index'] = indices_df['SPX Index']
+    else:
+        st.error("SPX Index not found in Indices data.")
     
-    return pd.DataFrame(data, index=dates)
+    # Try Forex for XAUUSD Curncy, fallback to Commodities
+    if 'XAUUSD Curncy' in forex_df.columns:
+        data['XAUUSD Curncy'] = forex_df['XAUUSD Curncy']
+    elif 'XAUUSD Curncy' in commodities_df.columns:
+        data['XAUUSD Curncy'] = commodities_df['XAUUSD Curncy']
+    else:
+        st.error("XAUUSD Curncy not found in Forex or Commodities data.")
+    
+    if 'CL1 Comdty' in commodities_df.columns:
+        data['CL1 Comdty'] = commodities_df['CL1 Comdty']
+    else:
+        st.error("CL1 Comdty not found in Commodities data.")
+    
+    # Drop any rows with missing values (or handle NaNs as needed)
+    data = data.dropna()
+    
+    # Ensure index is datetime
+    data.index = pd.to_datetime(data.index)
+    
+    return data
 
 def main():
     st.title("Market Dashboard Skema")
-    st.markdown("*Demo version with sample data*")
+    st.markdown("*Using real data from GitHub TSV files*")
     
-    # Generate sample data
-    data = create_sample_data()
+    # Load real data instead of sample
+    try:
+        data = load_real_data()
+    except Exception as e:
+        st.error(f"Error loading data: {str(e)}")
+        return  # Exit if data loading fails
     
     # Sidebar
     st.sidebar.header("Filters")
@@ -50,15 +86,15 @@ def main():
     selected_assets = st.sidebar.multiselect(
         "Select Assets",
         available_assets,
-        default=available_assets[:3]
+        default=available_assets  # Default to all loaded assets
     )
     
-    # Market regime indicator
+    # Market regime indicator (still random for demo; can be computed from real data later)
     st.sidebar.markdown("### Current Market Regime")
     current_regime = np.random.choice(['Growth', 'Recession', 'Inflation', 'Deflation'])
     st.sidebar.metric("Regime", current_regime)
     
-    # Key metrics
+    # Key metrics (still sample; adapt with real calculations if needed)
     st.sidebar.markdown("### Key Indicators")
     st.sidebar.metric("Growth", "2.1%", "0.3%")
     st.sidebar.metric("Inflation", "3.2%", "-0.1%")
@@ -80,9 +116,10 @@ def main():
         if selected_assets:
             # Use Streamlit's built-in line chart
             chart_data = filtered_data[selected_assets].copy()
-            # Normalize to 100 at start
+            # Normalize to 100 at start (assuming price data)
             for asset in selected_assets:
-                chart_data[asset] = (chart_data[asset] / chart_data[asset].iloc[0]) * 100
+                if not chart_data[asset].empty:
+                    chart_data[asset] = (chart_data[asset] / chart_data[asset].iloc[0]) * 100
             
             st.line_chart(chart_data)
         else:
@@ -94,13 +131,21 @@ def main():
             latest_prices = filtered_data.iloc[-1]
             for asset in selected_assets:
                 if asset in latest_prices.index:
+                    # Calculate daily change (assuming previous day exists)
+                    if len(filtered_data) > 1:
+                        prev_price = filtered_data[asset].iloc[-2]
+                        delta = ((latest_prices[asset] - prev_price) / prev_price) * 100
+                        delta_str = f"{delta:.2f}%"
+                    else:
+                        delta_str = "N/A"
+                    
                     st.metric(
                         asset.replace('_', ' '), 
                         f"${latest_prices[asset]:.2f}",
-                        f"{np.random.normal(0, 2):.2f}%"
+                        delta_str
                     )
     
-    # Term structure section
+    # Term structure section (still hardcoded; can be adapted with real data from FixedIncome or others)
     st.header("Futures Term Structure")
     col3, col4 = st.columns(2)
     
@@ -123,7 +168,7 @@ def main():
         }, index=contracts)
         st.bar_chart(oil_data)
     
-    # Yield curves
+    # Yield curves (still hardcoded; adapt with FixedIncome data if available)
     st.header("Bond Yield Curves")
     col5, col6 = st.columns(2)
     
@@ -146,24 +191,44 @@ def main():
         }, index=maturities)
         st.line_chart(german_data)
     
-    # Performance comparison table
+    # Performance comparison table (updated to use real data for periods)
     st.header("Asset Performance Comparison")
     
-    # Create performance table
+    # Create performance table using real data
     periods = ['1M', '3M', '6M', '1Y']
     performance_data = []
     
     for asset in available_assets:
         row_data = {'Asset': asset.replace('_', ' ')}
+        asset_series = data[asset]
+        
         for period in periods:
-            perf = np.random.normal(2, 8)
-            row_data[period] = f"{perf:.1f}%"
+            if period == '1M':
+                days = 30
+            elif period == '3M':
+                days = 90
+            elif period == '6M':
+                days = 180
+            elif period == '1Y':
+                days = 365
+            
+            end_date = asset_series.index.max()
+            start_date = end_date - timedelta(days=days)
+            
+            if start_date >= asset_series.index.min():
+                start_price = asset_series[asset_series.index >= start_date].iloc[0]
+                end_price = asset_series.iloc[-1]
+                perf = ((end_price - start_price) / start_price) * 100
+                row_data[period] = f"{perf:.1f}%"
+            else:
+                row_data[period] = "N/A"
+        
         performance_data.append(row_data)
     
     perf_df = pd.DataFrame(performance_data)
     st.dataframe(perf_df, use_container_width=True)
     
-    # Additional metrics section
+    # Additional metrics section (still sample; can compute from real data)
     st.header("Market Regime Analysis")
     
     col7, col8, col9 = st.columns(3)
@@ -182,16 +247,8 @@ def main():
     
     # Footer
     st.markdown("---")
-    st.markdown("*Data updates daily. This is a demo version with simulated data.*")
+    st.markdown("*Data loaded from GitHub TSV files. Updates depend on repository.*")
     st.markdown("**Features:** Real-time regime detection • Multi-asset monitoring • Term structure analysis")
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
