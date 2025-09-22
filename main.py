@@ -28,6 +28,12 @@ TICKERS = {
     ]
 }
 
+# US Treasury tickers (assuming GT* are US Treasuries)
+US_TREASURY_TICKERS = [t for t in TICKERS['Fixed Income'] if t.startswith('GT')]
+
+# Other bond tickers (assuming GB* are other bonds, e.g., German Bunds or UK Gilts)
+OTHER_BOND_TICKERS = [t for t in TICKERS['Fixed Income'] if t.startswith('GB')]
+
 # Flatten all tickers for easy access
 ALL_TICKERS = [ticker for group in TICKERS.values() for ticker in group]
 
@@ -112,6 +118,49 @@ def compute_rolling_correlation(returns, ticker1, ticker2, window):
     """Compute rolling correlation between two tickers"""
     rolling_corr = returns[ticker1].rolling(window=window).corr(returns[ticker2])
     return rolling_corr
+
+def get_yield_curve_data(data, tickers, yc_datetime, maturity_replace_from, maturity_replace_to=''):
+    # Find the closest date in the index (nearest previous if not exact)
+    if yc_datetime in data.index:
+        selected_yields = data.loc[yc_datetime, tickers].dropna()
+    else:
+        # Get the nearest previous date
+        prev_dates = data.index[data.index <= yc_datetime]
+        if not prev_dates.empty:
+            nearest_date = prev_dates.max()
+            selected_yields = data.loc[nearest_date, tickers].dropna()
+        else:
+            selected_yields = pd.Series()
+    
+    if not selected_yields.empty:
+        # Extract maturities (e.g., '2Y' from 'GT2 GOV')
+        maturities = []
+        for t in selected_yields.index:
+            maturity_str = t.replace(maturity_replace_from, '').replace(maturity_replace_to, '')
+            # Assume the remaining is the number, add 'Y' or 'M' based on context
+            if '12' in maturity_str:
+                maturity_str += 'M'  # Assuming GB12 is 12 months
+            elif '3' in maturity_str or '6' in maturity_str:
+                maturity_str += 'M'  # Assuming GB3/GB6 are months
+            else:
+                maturity_str += 'Y'
+            maturities.append(maturity_str)
+        
+        yc_data = pd.DataFrame({'Yield': selected_yields.values}, index=maturities)
+        
+        # Sort by maturity: convert to months for sorting (e.g., '3M' -> 3, '2Y' -> 24)
+        def maturity_to_months(m):
+            if 'Y' in m:
+                return int(m.rstrip('Y')) * 12
+            elif 'M' in m:
+                return int(m.rstrip('M'))
+            else:
+                return 0
+        
+        yc_data = yc_data.sort_index(key=lambda x: [maturity_to_months(m) for m in x])
+        
+        return yc_data
+    return pd.DataFrame()
 
 def main():
     st.title("Market Dashboard Skema")
@@ -212,48 +261,40 @@ def main():
                 else:
                     st.metric(asset.replace('_', ' '), "N/A", "N/A")
     
-    # Yield curves (only US Treasury, with date selector)
+    # Yield curves section
     st.header("Bond Yield Curves")
     
+    # Date selector for yield curves (shared for both)
+    yc_date = st.date_input(
+        "Select Date for Yield Curves",
+        value=max_date,
+        min_value=min_date,
+        max_value=max_date,
+        key="yc_date"
+    )
+    yc_datetime = datetime.combine(yc_date, datetime.min.time())
+    
+    # US Treasury Yields
     st.subheader("US Treasury Yields")
     if US_TREASURY_TICKERS and any(t in data.columns for t in US_TREASURY_TICKERS):
-        # Date selector for yield curve
-        yc_date = st.date_input(
-            "Select Date for Yield Curve",
-            value=max_date,
-            min_value=min_date,
-            max_value=max_date,
-            key="yc_date"
-        )
-        
-        # Convert to datetime
-        yc_datetime = datetime.combine(yc_date, datetime.min.time())
-        
-        # Find the closest date in the index (nearest previous if not exact)
-        if yc_datetime in data.index:
-            selected_yields = data.loc[yc_datetime, US_TREASURY_TICKERS].dropna()
-        else:
-            # Get the nearest previous date
-            prev_dates = data.index[data.index <= yc_datetime]
-            if not prev_dates.empty:
-                nearest_date = prev_dates.max()
-                selected_yields = data.loc[nearest_date, US_TREASURY_TICKERS].dropna()
-            else:
-                selected_yields = pd.Series()
-        
-        if not selected_yields.empty:
-            # Extract maturities (e.g., '2' from 'GT2:GOV', '10' from 'GT10:GOV')
-            maturities = [t.replace('GT', '').replace(':GOV', '') + 'Y' for t in selected_yields.index]
-            yc_data = pd.DataFrame({'Yield': selected_yields.values}, index=maturities)
-            
-            # Sort by maturity (assuming numerical years)
-            yc_data = yc_data.sort_index(key=lambda x: pd.to_numeric(x.str.rstrip('Y')))
-            
-            st.line_chart(yc_data)
+        us_yc_data = get_yield_curve_data(data, US_TREASURY_TICKERS, yc_datetime, 'GT', ' GOV')
+        if not us_yc_data.empty:
+            st.line_chart(us_yc_data)
         else:
             st.warning(f"No US Treasury yield data available for {yc_date} or nearest previous date.")
     else:
         st.warning("No US Treasury yield data available.")
+    
+    # Other Yields (e.g., GB bonds)
+    st.subheader("Other Bond Yields")
+    if OTHER_BOND_TICKERS and any(t in data.columns for t in OTHER_BOND_TICKERS):
+        other_yc_data = get_yield_curve_data(data, OTHER_BOND_TICKERS, yc_datetime, 'GB', ' GOV')
+        if not other_yc_data.empty:
+            st.line_chart(other_yc_data)
+        else:
+            st.warning(f"No other bond yield data available for {yc_date} or nearest previous date.")
+    else:
+        st.warning("No other bond yield data available.")
     
     # Performance comparison table (calculating returns from prices)
     st.header("Asset Performance Comparison")
@@ -304,7 +345,7 @@ def main():
     else:
         st.warning("No performance data available.")
     
-    # New Module: Correlation Matrix
+    # Correlation Matrix
     st.header("Correlation Matrix")
     if selected_assets and len(selected_assets) >= 2 and not filtered_data.empty:
         returns = compute_returns(filtered_data[selected_assets])
@@ -316,17 +357,15 @@ def main():
     else:
         st.warning("Select at least two assets to compute correlation matrix.")
     
-    # New Module: Rolling Correlations (1W, 1M, 3M)
+    # Rolling Correlations
     st.header("Rolling Correlations")
     if available_assets:
-        # Select two tickers for correlation
         ticker1 = st.selectbox("Select First Ticker", available_assets)
         ticker2 = st.selectbox("Select Second Ticker", available_assets)
         
         if ticker1 and ticker2 and ticker1 != ticker2:
             returns = compute_returns(filtered_data[[ticker1, ticker2]])
             
-            # Define windows
             windows = {
                 '1W (7 days)': 7,
                 '1M (30 days)': 30,
@@ -338,14 +377,13 @@ def main():
             
             rolling_corr = compute_rolling_correlation(returns, ticker1, ticker2, window_size)
             
-            # Plot rolling correlation
             st.line_chart(rolling_corr)
         else:
             st.warning("Select two different tickers to compute rolling correlation.")
     else:
         st.warning("No assets available for correlation analysis.")
     
-    # Additional metrics section (placeholder)
+    # Market Regime Analysis (placeholder)
     st.header("Market Regime Analysis")
     
     col7, col8, col9 = st.columns(3)
@@ -369,5 +407,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
