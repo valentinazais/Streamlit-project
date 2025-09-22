@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
-st.set_page_config(page_title="Cross-Asset Market Regime Monitor", layout="wide")
+st.set_page_config(page_title="Cross-Asset Market Regime Monitor", layout="wide", width="stretch")
 
 def create_sample_data():
     """Generate sample data for testing"""
@@ -187,5 +187,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
