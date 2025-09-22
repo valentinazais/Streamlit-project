@@ -25,7 +25,7 @@ def create_sample_data():
     return pd.DataFrame(data, index=dates)
 
 def main():
-    st.title("Cross-Asset Market Regime Monitor")
+    st.title("Market Dashboard Skema")
     st.markdown("*Demo version with sample data*")
     
     # Generate sample data
@@ -187,6 +187,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
