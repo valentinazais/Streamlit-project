@@ -12,30 +12,37 @@ FIXED_INCOME_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-pr
 INDICES_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/Indices_2Y.csv"
 
 def load_and_process_csv(url):
-    """Load CSV from URL, handle comma as decimal, parse dates"""
-    # Load all columns as string to handle comma decimals
-    df = pd.read_csv(url, sep=';', dtype=str)
-    
-    # Assume first column is 'Dates'
-    if 'Dates' not in df.columns:
-        raise ValueError(f"'Dates' column not found in data from {url}")
-    
-    # Parse dates
-    df['Dates'] = pd.to_datetime(df['Dates'], errors='coerce')
-    
-    # Drop rows where 'Dates' is NaT
-    df = df.dropna(subset=['Dates'])
-    
-    # For all other columns (assumed numeric), replace ',' with '.' and convert to float
-    for col in df.columns:
-        if col != 'Dates':
-            df[col] = df[col].str.replace(',', '.', regex=False)
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-    
-    # Set index to 'Dates' and drop any rows with all NaN values
-    df = df.set_index('Dates').dropna(how='all')
-    
-    return df
+    """Load CSV from URL, handle comma as decimal, parse dates in DD/MM/YYYY format"""
+    try:
+        # Load all columns as string to handle comma decimals
+        df = pd.read_csv(url, sep=';', dtype=str)
+        
+        # Assume first column is 'Dates'
+        if 'Dates' not in df.columns:
+            raise ValueError(f"'Dates' column not found in data from {url}")
+        
+        # Parse dates with DD/MM/YYYY format
+        df['Dates'] = pd.to_datetime(df['Dates'], format='%d/%m/%Y', errors='coerce')
+        
+        # Drop rows where 'Dates' is NaT
+        df = df.dropna(subset=['Dates'])
+        
+        # For all other columns (assumed numeric), replace ',' with '.' and convert to float
+        for col in df.columns:
+            if col != 'Dates':
+                df[col] = df[col].str.replace(',', '.', regex=False)
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        # Set index to 'Dates' and drop any rows with all NaN values
+        df = df.set_index('Dates').dropna(how='all')
+        
+        # Sort index to ensure chronological order
+        df = df.sort_index()
+        
+        return df
+    except Exception as e:
+        st.warning(f"Failed to load or process data from {url}: {str(e)}")
+        return pd.DataFrame()  # Return empty DataFrame on failure
 
 def load_real_data():
     """Load real data from CSV files on GitHub and combine relevant assets"""
@@ -43,68 +50,71 @@ def load_real_data():
     commodities_df = load_and_process_csv(COMMODITIES_URL)
     forex_df = load_and_process_csv(FOREX_URL)
     indices_df = load_and_process_csv(INDICES_URL)
-    # FixedIncome not needed for the main assets, but loaded if required later
-    # fixed_income_df = load_and_process_csv(FIXED_INCOME_URL)
+    # fixed_income_df = load_and_process_csv(FIXED_INCOME_URL)  # Load if needed for yields
     
-    # Extract specific columns based on user's mapping
-    # Assuming:
-    # - 'SPX Index' is in Indices
-    # - 'XAUUSD Curncy' might be in Forex or Commodities
-    # - 'CL1 Comdty' is in Commodities
-    # For now, forgetting USD_Index and VIX
-    
-    all_indices = indices_df.index.union(commodities_df.index.union(forex_df.index))
+    # Combine indices from all sources
+    all_indices = commodities_df.index.union(forex_df.index.union(indices_df.index))
     data = pd.DataFrame(index=all_indices)
     
-    if 'SPX Index' in indices_df.columns:
+    # Extract specific assets; treat as prices
+    selected_assets = []
+    
+    if not indices_df.empty and 'SPX Index' in indices_df.columns:
         data['SPX Index'] = indices_df['SPX Index']
-    else:
-        st.error("SPX Index not found in Indices data.")
+        selected_assets.append('SPX Index')
+    # else:
+    #     st.warning("SPX Index not found or failed to load.")
     
     # Try Forex for XAUUSD Curncy, fallback to Commodities
-    if 'XAUUSD Curncy' in forex_df.columns:
+    if not forex_df.empty and 'XAUUSD Curncy' in forex_df.columns:
         data['XAUUSD Curncy'] = forex_df['XAUUSD Curncy']
-    elif 'XAUUSD Curncy' in commodities_df.columns:
+        selected_assets.append('XAUUSD Curncy')
+    elif not commodities_df.empty and 'XAUUSD Curncy' in commodities_df.columns:
         data['XAUUSD Curncy'] = commodities_df['XAUUSD Curncy']
-    else:
-        st.error("XAUUSD Curncy not found in Forex or Commodities data.")
+        selected_assets.append('XAUUSD Curncy')
+    # else:
+    #     st.warning("XAUUSD Curncy not found.")
     
-    if 'CL1 Comdty' in commodities_df.columns:
+    if not commodities_df.empty and 'CL1 Comdty' in commodities_df.columns:
         data['CL1 Comdty'] = commodities_df['CL1 Comdty']
-    else:
-        st.error("CL1 Comdty not found in Commodities data.")
+        selected_assets.append('CL1 Comdty')
+    # else:
+    #     st.warning("CL1 Comdty not found.")
     
     # Drop rows with all NaNs
     data = data.dropna(how='all')
     
-    # Sort index to ensure chronological order
+    # Sort index
     data = data.sort_index()
     
     # Ensure index is datetime
     data.index = pd.to_datetime(data.index)
     
-    # Remove any rows with NaT in index to prevent comparison errors
+    # Remove any rows with NaT in index
     data = data[data.index.notna()]
     
-    return data
+    return data, selected_assets
 
 def main():
     st.title("Market Dashboard Skema")
-    st.markdown("*Using real data from GitHub CSV files*")
+    st.markdown("*Using real price data from GitHub CSV files*")
     
-    # Load real data instead of sample
+    # Load real data
     try:
-        data = load_real_data()
+        data, default_assets = load_real_data()
+        if data.empty:
+            st.error("No data loaded successfully. Please check the URLs and file contents.")
+            return
     except Exception as e:
         st.error(f"Error loading data: {str(e)}")
-        return  # Exit if data loading fails
+        return
     
     # Sidebar
     st.sidebar.header("Filters")
     
     # Date range
-    min_date = data.index.min().date()
-    max_date = data.index.max().date()
+    min_date = data.index.min().date() if not data.empty else datetime.now().date()
+    max_date = data.index.max().date() if not data.empty else datetime.now().date()
     
     date_range = st.sidebar.date_input(
         "Select Date Range",
@@ -118,15 +128,15 @@ def main():
     selected_assets = st.sidebar.multiselect(
         "Select Assets",
         available_assets,
-        default=available_assets  # Default to all loaded assets
+        default=default_assets  # Default to loaded assets
     )
     
-    # Market regime indicator (still random for demo; can be computed from real data later)
+    # Market regime indicator (random for demo; can compute from data)
     st.sidebar.markdown("### Current Market Regime")
     current_regime = np.random.choice(['Growth', 'Recession', 'Inflation', 'Deflation'])
     st.sidebar.metric("Regime", current_regime)
     
-    # Key metrics (still sample; adapt with real calculations if needed)
+    # Key metrics (sample; can compute from data)
     st.sidebar.markdown("### Key Indicators")
     st.sidebar.metric("Growth", "2.1%", "0.3%")
     st.sidebar.metric("Inflation", "3.2%", "-0.1%")
@@ -135,7 +145,6 @@ def main():
     # Filter data by date
     if len(date_range) == 2:
         start_date, end_date = date_range
-        # Convert to datetime for comparison
         start_dt = datetime.combine(start_date, datetime.min.time())
         end_dt = datetime.combine(end_date, datetime.max.time())
         mask = (data.index >= start_dt) & (data.index <= end_dt)
@@ -148,46 +157,45 @@ def main():
     
     with col1:
         st.header("Performance Metrics")
-        if selected_assets:
-            # Use Streamlit's built-in line chart
+        if selected_assets and not filtered_data.empty:
             chart_data = filtered_data[selected_assets].copy()
-            # Normalize to 100 at start (assuming price data)
+            # Normalize prices to 100 at start for performance charting
             for asset in selected_assets:
-                if not chart_data[asset].empty:
-                    first_valid = chart_data[asset].first_valid_index()
-                    if first_valid is not None:
-                        chart_data[asset] = (chart_data[asset] / chart_data[asset].loc[first_valid]) * 100
-                    else:
-                        chart_data[asset] = np.nan
-            
+                asset_series = chart_data[asset].dropna()
+                if not asset_series.empty:
+                    first_valid = asset_series.first_valid_index()
+                    chart_data[asset] = (chart_data[asset] / asset_series.loc[first_valid]) * 100
+                else:
+                    chart_data[asset] = np.nan
             st.line_chart(chart_data)
         else:
-            st.warning("Please select at least one asset")
+            st.warning("Please select at least one asset or no data available.")
     
     with col2:
         st.header("Latest Prices")
         if not filtered_data.empty:
             latest_prices = filtered_data.iloc[-1]
             for asset in selected_assets:
-                if asset in latest_prices.index:
-                    # Calculate daily change (assuming previous day exists)
+                if asset in latest_prices.index and pd.notna(latest_prices[asset]):
+                    # Calculate daily change if possible
                     if len(filtered_data) > 1:
                         prev_price = filtered_data[asset].iloc[-2]
-                        if pd.notna(prev_price) and pd.notna(latest_prices[asset]):
+                        if pd.notna(prev_price):
                             delta = ((latest_prices[asset] - prev_price) / prev_price) * 100
                             delta_str = f"{delta:.2f}%"
                         else:
                             delta_str = "N/A"
                     else:
                         delta_str = "N/A"
-                    
                     st.metric(
                         asset.replace('_', ' '), 
-                        f"${latest_prices[asset]:.2f}" if pd.notna(latest_prices[asset]) else "N/A",
+                        f"${latest_prices[asset]:.2f}",
                         delta_str
                     )
+                else:
+                    st.metric(asset.replace('_', ' '), "N/A", "N/A")
     
-    # Term structure section (still hardcoded; can be adapted with real data from FixedIncome or others)
+    # Term structure section (hardcoded; adapt with real data if available)
     st.header("Futures Term Structure")
     col3, col4 = st.columns(2)
     
@@ -195,22 +203,16 @@ def main():
         st.subheader("Gold Futures")
         contracts = ['Dec24', 'Mar25', 'Jun25', 'Sep25']
         prices = [2010, 2015, 2020, 2025]
-        
-        term_data = pd.DataFrame({
-            'Price': prices
-        }, index=contracts)
+        term_data = pd.DataFrame({'Price': prices}, index=contracts)
         st.bar_chart(term_data)
     
     with col4:
         st.subheader("Oil Futures")
         oil_prices = [78, 79, 80, 81]
-        
-        oil_data = pd.DataFrame({
-            'Price': oil_prices
-        }, index=contracts)
+        oil_data = pd.DataFrame({'Price': oil_prices}, index=contracts)
         st.bar_chart(oil_data)
     
-    # Yield curves (still hardcoded; adapt with FixedIncome data if available)
+    # Yield curves (hardcoded; adapt with real data if available)
     st.header("Bond Yield Curves")
     col5, col6 = st.columns(2)
     
@@ -218,31 +220,24 @@ def main():
         st.subheader("US Treasury")
         maturities = ['3M', '6M', '1Y', '2Y', '5Y', '10Y', '30Y']
         us_yields = [5.2, 5.1, 4.8, 4.5, 4.2, 4.3, 4.5]
-        
-        us_data = pd.DataFrame({
-            'Yield': us_yields
-        }, index=maturities)
+        us_data = pd.DataFrame({'Yield': us_yields}, index=maturities)
         st.line_chart(us_data)
     
     with col6:
         st.subheader("German Bunds")
         german_yields = [3.5, 3.4, 3.2, 2.8, 2.5, 2.4, 2.6]
-        
-        german_data = pd.DataFrame({
-            'Yield': german_yields
-        }, index=maturities)
+        german_data = pd.DataFrame({'Yield': german_yields}, index=maturities)
         st.line_chart(german_data)
     
-    # Performance comparison table (updated to use real data for periods)
+    # Performance comparison table (calculating returns from prices)
     st.header("Asset Performance Comparison")
     
-    # Create performance table using real data
     periods = ['1M', '3M', '6M', '1Y']
     performance_data = []
     
     for asset in available_assets:
         row_data = {'Asset': asset.replace('_', ' ')}
-        asset_series = data[asset].dropna()  # Drop NaNs for this asset
+        asset_series = data[asset].dropna()
         
         if asset_series.empty:
             for period in periods:
@@ -263,22 +258,27 @@ def main():
             end_date = asset_series.index.max()
             start_date = end_date - timedelta(days=days)
             
-            # Find the closest start date available
             start_prices = asset_series[asset_series.index >= start_date]
             if not start_prices.empty:
                 start_price = start_prices.iloc[0]
                 end_price = asset_series.loc[end_date]
-                perf = ((end_price - start_price) / start_price) * 100
-                row_data[period] = f"{perf:.1f}%"
+                if pd.notna(start_price) and pd.notna(end_price):
+                    perf = ((end_price - start_price) / start_price) * 100
+                    row_data[period] = f"{perf:.1f}%"
+                else:
+                    row_data[period] = "N/A"
             else:
                 row_data[period] = "N/A"
         
         performance_data.append(row_data)
     
-    perf_df = pd.DataFrame(performance_data)
-    st.dataframe(perf_df, use_container_width=True)
+    if performance_data:
+        perf_df = pd.DataFrame(performance_data)
+        st.dataframe(perf_df, use_container_width=True)
+    else:
+        st.warning("No performance data available.")
     
-    # Additional metrics section (still sample; can compute from real data)
+    # Additional metrics section (sample)
     st.header("Market Regime Analysis")
     
     col7, col8, col9 = st.columns(3)
@@ -297,7 +297,7 @@ def main():
     
     # Footer
     st.markdown("---")
-    st.markdown("*Data loaded from GitHub CSV files. Updates depend on repository.*")
+    st.markdown("*Data loaded from GitHub CSV files. Treating as price data; returns calculated accordingly.*")
     st.markdown("**Features:** Real-time regime detection • Multi-asset monitoring • Term structure analysis")
 
 if __name__ == "__main__":
