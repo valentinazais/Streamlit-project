@@ -5,16 +5,16 @@ from datetime import datetime, timedelta
 
 st.set_page_config(page_title="Cross-Asset Market Regime Monitor", layout="wide")
 
-# Define the GitHub raw URLs for the TSV files
-COMMODITIES_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/Commodities_2Y.tsv"
-FOREX_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/Forex_2Y.tsv"
-FIXED_INCOME_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/FixedIncome_2Y.tsv"
-INDICES_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/Indices_2Y.tsv"
+# Define the GitHub raw URLs for the CSV files
+COMMODITIES_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/Commodities_2Y.csv"
+FOREX_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/Forex_2Y.csv"
+FIXED_INCOME_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/FixedIncome_2Y.csv"
+INDICES_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/Indices_2Y.csv"
 
-def load_and_process_tsv(url):
-    """Load TSV from URL, handle comma as decimal, parse dates"""
+def load_and_process_csv(url):
+    """Load CSV from URL, handle comma as decimal, parse dates"""
     # Load all columns as string to handle comma decimals
-    df = pd.read_csv(url, sep='\t', dtype=str)
+    df = pd.read_csv(url, sep=';', dtype=str)
     
     # Assume first column is 'Dates'
     if 'Dates' not in df.columns:
@@ -23,25 +23,28 @@ def load_and_process_tsv(url):
     # Parse dates
     df['Dates'] = pd.to_datetime(df['Dates'], errors='coerce')
     
+    # Drop rows where 'Dates' is NaT
+    df = df.dropna(subset=['Dates'])
+    
     # For all other columns (assumed numeric), replace ',' with '.' and convert to float
     for col in df.columns:
         if col != 'Dates':
             df[col] = df[col].str.replace(',', '.', regex=False)
             df[col] = pd.to_numeric(df[col], errors='coerce')
     
-    # Set index to 'Dates' and drop any rows with invalid dates
+    # Set index to 'Dates' and drop any rows with all NaN values
     df = df.set_index('Dates').dropna(how='all')
     
     return df
 
 def load_real_data():
-    """Load real data from TSV files on GitHub and combine relevant assets"""
-    # Load each TSV file with processing
-    commodities_df = load_and_process_tsv(COMMODITIES_URL)
-    forex_df = load_and_process_tsv(FOREX_URL)
-    indices_df = load_and_process_tsv(INDICES_URL)
+    """Load real data from CSV files on GitHub and combine relevant assets"""
+    # Load each CSV file with processing
+    commodities_df = load_and_process_csv(COMMODITIES_URL)
+    forex_df = load_and_process_csv(FOREX_URL)
+    indices_df = load_and_process_csv(INDICES_URL)
     # FixedIncome not needed for the main assets, but loaded if required later
-    # fixed_income_df = load_and_process_tsv(FIXED_INCOME_URL)
+    # fixed_income_df = load_and_process_csv(FIXED_INCOME_URL)
     
     # Extract specific columns based on user's mapping
     # Assuming:
@@ -50,7 +53,8 @@ def load_real_data():
     # - 'CL1 Comdty' is in Commodities
     # For now, forgetting USD_Index and VIX
     
-    data = pd.DataFrame(index=indices_df.index.union(commodities_df.index.union(forex_df.index)))
+    all_indices = indices_df.index.union(commodities_df.index.union(forex_df.index))
+    data = pd.DataFrame(index=all_indices)
     
     if 'SPX Index' in indices_df.columns:
         data['SPX Index'] = indices_df['SPX Index']
@@ -70,19 +74,23 @@ def load_real_data():
     else:
         st.error("CL1 Comdty not found in Commodities data.")
     
-    # Align indices and drop rows with all NaNs
+    # Drop rows with all NaNs
     data = data.dropna(how='all')
+    
+    # Sort index to ensure chronological order
+    data = data.sort_index()
     
     # Ensure index is datetime
     data.index = pd.to_datetime(data.index)
-
+    
+    # Remove any rows with NaT in index to prevent comparison errors
     data = data[data.index.notna()]
     
     return data
 
 def main():
     st.title("Market Dashboard Skema")
-    st.markdown("*Using real data from GitHub TSV files*")
+    st.markdown("*Using real data from GitHub CSV files*")
     
     # Load real data instead of sample
     try:
@@ -127,7 +135,10 @@ def main():
     # Filter data by date
     if len(date_range) == 2:
         start_date, end_date = date_range
-        mask = (data.index.date >= start_date) & (data.index.date <= end_date)
+        # Convert to datetime for comparison
+        start_dt = datetime.combine(start_date, datetime.min.time())
+        end_dt = datetime.combine(end_date, datetime.max.time())
+        mask = (data.index >= start_dt) & (data.index <= end_dt)
         filtered_data = data.loc[mask]
     else:
         filtered_data = data
@@ -143,7 +154,11 @@ def main():
             # Normalize to 100 at start (assuming price data)
             for asset in selected_assets:
                 if not chart_data[asset].empty:
-                    chart_data[asset] = (chart_data[asset] / chart_data[asset].iloc[0]) * 100
+                    first_valid = chart_data[asset].first_valid_index()
+                    if first_valid is not None:
+                        chart_data[asset] = (chart_data[asset] / chart_data[asset].loc[first_valid]) * 100
+                    else:
+                        chart_data[asset] = np.nan
             
             st.line_chart(chart_data)
         else:
@@ -158,16 +173,65 @@ def main():
                     # Calculate daily change (assuming previous day exists)
                     if len(filtered_data) > 1:
                         prev_price = filtered_data[asset].iloc[-2]
-                        delta = ((latest_prices[asset] - prev_price) / prev_price) * 100
-                        delta_str = f"{delta:.2f}%"
+                        if pd.notna(prev_price) and pd.notna(latest_prices[asset]):
+                            delta = ((latest_prices[asset] - prev_price) / prev_price) * 100
+                            delta_str = f"{delta:.2f}%"
+                        else:
+                            delta_str = "N/A"
                     else:
                         delta_str = "N/A"
                     
                     st.metric(
                         asset.replace('_', ' '), 
-                        f"${latest_prices[asset]:.2f}",
+                        f"${latest_prices[asset]:.2f}" if pd.notna(latest_prices[asset]) else "N/A",
                         delta_str
                     )
+    
+    # Term structure section (still hardcoded; can be adapted with real data from FixedIncome or others)
+    st.header("Futures Term Structure")
+    col3, col4 = st.columns(2)
+    
+    with col3:
+        st.subheader("Gold Futures")
+        contracts = ['Dec24', 'Mar25', 'Jun25', 'Sep25']
+        prices = [2010, 2015, 2020, 2025]
+        
+        term_data = pd.DataFrame({
+            'Price': prices
+        }, index=contracts)
+        st.bar_chart(term_data)
+    
+    with col4:
+        st.subheader("Oil Futures")
+        oil_prices = [78, 79, 80, 81]
+        
+        oil_data = pd.DataFrame({
+            'Price': oil_prices
+        }, index=contracts)
+        st.bar_chart(oil_data)
+    
+    # Yield curves (still hardcoded; adapt with FixedIncome data if available)
+    st.header("Bond Yield Curves")
+    col5, col6 = st.columns(2)
+    
+    with col5:
+        st.subheader("US Treasury")
+        maturities = ['3M', '6M', '1Y', '2Y', '5Y', '10Y', '30Y']
+        us_yields = [5.2, 5.1, 4.8, 4.5, 4.2, 4.3, 4.5]
+        
+        us_data = pd.DataFrame({
+            'Yield': us_yields
+        }, index=maturities)
+        st.line_chart(us_data)
+    
+    with col6:
+        st.subheader("German Bunds")
+        german_yields = [3.5, 3.4, 3.2, 2.8, 2.5, 2.4, 2.6]
+        
+        german_data = pd.DataFrame({
+            'Yield': german_yields
+        }, index=maturities)
+        st.line_chart(german_data)
     
     # Performance comparison table (updated to use real data for periods)
     st.header("Asset Performance Comparison")
@@ -233,10 +297,8 @@ def main():
     
     # Footer
     st.markdown("---")
-    st.markdown("*Data loaded from GitHub TSV files. Updates depend on repository.*")
+    st.markdown("*Data loaded from GitHub CSV files. Updates depend on repository.*")
     st.markdown("**Features:** Real-time regime detection • Multi-asset monitoring • Term structure analysis")
 
 if __name__ == "__main__":
     main()
-
-
