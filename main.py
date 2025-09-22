@@ -32,7 +32,7 @@ def main():
     data = create_sample_data()
     
     # Sidebar
-    st.sidebar.header("Filrzeazerzer")
+    st.sidebar.header("Filters")
     
     # Date range
     min_date = data.index.min().date()
@@ -187,6 +187,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
