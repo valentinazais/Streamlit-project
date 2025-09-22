@@ -10,7 +10,7 @@ def create_sample_data():
     dates = pd.date_range(start='2023-01-01', end='2024-09-19', freq='D')
     
     # Sample price data
-    np.random.seed(68)
+    np.random.seed()
     data = {}
     
     # Generate sample asset prices
@@ -187,6 +187,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
