@@ -169,52 +169,6 @@ def main():
                         delta_str
                     )
     
-    # Term structure section (still hardcoded; can be adapted with real data from FixedIncome or others)
-    st.header("Futures Term Structure")
-    col3, col4 = st.columns(2)
-    
-    with col3:
-        st.subheader("Gold Futures")
-        contracts = ['Dec24', 'Mar25', 'Jun25', 'Sep25']
-        prices = [2010, 2015, 2020, 2025]
-        
-        term_data = pd.DataFrame({
-            'Price': prices
-        }, index=contracts)
-        st.bar_chart(term_data)
-    
-    with col4:
-        st.subheader("Oil Futures")
-        oil_prices = [78, 79, 80, 81]
-        
-        oil_data = pd.DataFrame({
-            'Price': oil_prices
-        }, index=contracts)
-        st.bar_chart(oil_data)
-    
-    # Yield curves (still hardcoded; adapt with FixedIncome data if available)
-    st.header("Bond Yield Curves")
-    col5, col6 = st.columns(2)
-    
-    with col5:
-        st.subheader("US Treasury")
-        maturities = ['3M', '6M', '1Y', '2Y', '5Y', '10Y', '30Y']
-        us_yields = [5.2, 5.1, 4.8, 4.5, 4.2, 4.3, 4.5]
-        
-        us_data = pd.DataFrame({
-            'Yield': us_yields
-        }, index=maturities)
-        st.line_chart(us_data)
-    
-    with col6:
-        st.subheader("German Bunds")
-        german_yields = [3.5, 3.4, 3.2, 2.8, 2.5, 2.4, 2.6]
-        
-        german_data = pd.DataFrame({
-            'Yield': german_yields
-        }, index=maturities)
-        st.line_chart(german_data)
-    
     # Performance comparison table (updated to use real data for periods)
     st.header("Asset Performance Comparison")
     
@@ -284,4 +238,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
