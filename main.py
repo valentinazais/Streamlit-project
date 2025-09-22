@@ -28,11 +28,8 @@ TICKERS = {
     ]
 }
 
-# US Treasury tickers (assuming GT* are US Treasuries)
-US_TREASURY_TICKERS = [t for t in TICKERS['Fixed Income'] if t.startswith('GT')]
-
-# Other bond tickers (assuming GB* are other bonds, e.g., German Bunds or UK Gilts)
-OTHER_BOND_TICKERS = [t for t in TICKERS['Fixed Income'] if t.startswith('GB')]
+# All fixed income tickers are US Treasuries/Bills
+US_FIXED_INCOME_TICKERS = TICKERS['Fixed Income']
 
 # Flatten all tickers for easy access
 ALL_TICKERS = [ticker for group in TICKERS.values() for ticker in group]
@@ -119,7 +116,7 @@ def compute_rolling_correlation(returns, ticker1, ticker2, window):
     rolling_corr = returns[ticker1].rolling(window=window).corr(returns[ticker2])
     return rolling_corr
 
-def get_yield_curve_data(data, tickers, yc_datetime, maturity_replace_from, maturity_replace_to=''):
+def get_yield_curve_data(data, tickers, yc_datetime):
     # Find the closest date in the index (nearest previous if not exact)
     if yc_datetime in data.index:
         selected_yields = data.loc[yc_datetime, tickers].dropna()
@@ -133,18 +130,20 @@ def get_yield_curve_data(data, tickers, yc_datetime, maturity_replace_from, matu
             selected_yields = pd.Series()
     
     if not selected_yields.empty:
-        # Extract maturities (e.g., '2Y' from 'GT2 GOV')
+        # Extract maturities (e.g., '3M' from 'GB3 GOV', '2Y' from 'GT2 GOV')
         maturities = []
         for t in selected_yields.index:
-            maturity_str = t.replace(maturity_replace_from, '').replace(maturity_replace_to, '')
-            # Assume the remaining is the number, add 'Y' or 'M' based on context
-            if '12' in maturity_str:
-                maturity_str += 'M'  # Assuming GB12 is 12 months
-            elif '3' in maturity_str or '6' in maturity_str:
-                maturity_str += 'M'  # Assuming GB3/GB6 are months
+            if t.startswith('GB'):
+                maturity_num = t.replace('GB', '').replace(' GOV', '')
+                if maturity_num == '12':
+                    maturities.append('1Y')  # Treat 12 as 1Y
+                else:
+                    maturities.append(maturity_num + 'M')
+            elif t.startswith('GT'):
+                maturity_num = t.replace('GT', '').replace(' GOV', '')
+                maturities.append(maturity_num + 'Y')
             else:
-                maturity_str += 'Y'
-            maturities.append(maturity_str)
+                maturities.append(t)  # Fallback
         
         yc_data = pd.DataFrame({'Yield': selected_yields.values}, index=maturities)
         
@@ -264,9 +263,9 @@ def main():
     # Yield curves section
     st.header("Bond Yield Curves")
     
-    # Date selector for yield curves (shared for both)
+    # Date selector for yield curve
     yc_date = st.date_input(
-        "Select Date for Yield Curves",
+        "Select Date for Yield Curve",
         value=max_date,
         min_value=min_date,
         max_value=max_date,
@@ -274,27 +273,16 @@ def main():
     )
     yc_datetime = datetime.combine(yc_date, datetime.min.time())
     
-    # US Treasury Yields
-    st.subheader("US Treasury Yields")
-    if US_TREASURY_TICKERS and any(t in data.columns for t in US_TREASURY_TICKERS):
-        us_yc_data = get_yield_curve_data(data, US_TREASURY_TICKERS, yc_datetime, 'GT', ' GOV')
+    # US Treasury Yields (including all fixed income as US)
+    st.subheader("US Treasury Yield Curve")
+    if US_FIXED_INCOME_TICKERS and any(t in data.columns for t in US_FIXED_INCOME_TICKERS):
+        us_yc_data = get_yield_curve_data(data, US_FIXED_INCOME_TICKERS, yc_datetime)
         if not us_yc_data.empty:
             st.line_chart(us_yc_data)
         else:
             st.warning(f"No US Treasury yield data available for {yc_date} or nearest previous date.")
     else:
         st.warning("No US Treasury yield data available.")
-    
-    # Other Yields (e.g., GB bonds)
-    st.subheader("Other Bond Yields")
-    if OTHER_BOND_TICKERS and any(t in data.columns for t in OTHER_BOND_TICKERS):
-        other_yc_data = get_yield_curve_data(data, OTHER_BOND_TICKERS, yc_datetime, 'GB', ' GOV')
-        if not other_yc_data.empty:
-            st.line_chart(other_yc_data)
-        else:
-            st.warning(f"No other bond yield data available for {yc_date} or nearest previous date.")
-    else:
-        st.warning("No other bond yield data available.")
     
     # Performance comparison table (calculating returns from prices)
     st.header("Asset Performance Comparison")
