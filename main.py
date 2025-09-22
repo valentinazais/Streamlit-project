@@ -212,30 +212,22 @@ def main():
                 else:
                     st.metric(asset.replace('_', ' '), "N/A", "N/A")
     
-    # Removed hardcoded term structure section; replace with CSV data if futures curves are added in future
-    
-    # Yield curves (using fixed income data if available)
+    # Yield curves (using fixed income data if available) - Only US Treasury
     st.header("Bond Yield Curves")
-    col5, col6 = st.columns(2)
     
-    with col5:
-        st.subheader("US Treasury Yields")
-        treasury_tickers = TICKERS['Fixed Income']
-        if any(t in filtered_data.columns for t in treasury_tickers):
-            # Get latest yields
-            latest_yields = filtered_data[treasury_tickers].iloc[-1].dropna()
-            if not latest_yields.empty:
-                maturities = [t.split(':')[0] for t in latest_yields.index]  # e.g., 'GB3', 'GT10'
-                us_data = pd.DataFrame({'Yield': latest_yields.values}, index=maturities)
-                st.line_chart(us_data)
-            else:
-                st.warning("No US Treasury yield data available.")
+    st.subheader("US Treasury Yields")
+    treasury_tickers = TICKERS['Fixed Income']
+    if any(t in filtered_data.columns for t in treasury_tickers):
+        # Get latest yields
+        latest_yields = filtered_data[treasury_tickers].iloc[-1].dropna()
+        if not latest_yields.empty:
+            maturities = [t.split(':')[0] for t in latest_yields.index]  # e.g., 'GB3', 'GT10'
+            us_data = pd.DataFrame({'Yield': latest_yields.values}, index=maturities)
+            st.line_chart(us_data)
         else:
             st.warning("No US Treasury yield data available.")
-    
-    with col6:
-        st.subheader("Other Yield Curves")
-        st.info("Additional yield curves (e.g., German Bunds) not available in current CSV data.")
+    else:
+        st.warning("No US Treasury yield data available.")
     
     # Performance comparison table (calculating returns from prices)
     st.header("Asset Performance Comparison")
@@ -292,8 +284,8 @@ def main():
         returns = compute_returns(filtered_data[selected_assets])
         corr_matrix = compute_correlation_matrix(returns)
         
-        # Display as styled dataframe with background gradient (heatmap-like)
-        styled_corr = corr_matrix.style.background_gradient(cmap='coolwarm', axis=None).format("{:.2f}")
+        # Display as styled dataframe without background_gradient (to avoid matplotlib dependency)
+        styled_corr = corr_matrix.style.format("{:.2f}")
         st.dataframe(styled_corr, use_container_width=True)
     else:
         st.warning("Select at least two assets to compute correlation matrix.")
