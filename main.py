@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Cross-Asset Market Regime Monitor", layout="wide")
 
@@ -11,7 +13,27 @@ FOREX_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/r
 FIXED_INCOME_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/FixedIncome_2Y.csv"
 INDICES_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/Indices_2Y.csv"
 
-def load_and_process_csv(url):
+# Predefined list of tickers based on user input
+TICKERS = {
+    'Forex': [
+        'USDCAD Curncy', 'USDMXN Curncy', 'EURUSD Curncy', 'GBPUSD Curncy',
+        'USDJPY Curncy', 'EURJPY Curncy', 'USDARS Curncy'
+    ],
+    'Commodities': [
+        'CL1 Comdty', 'GC1 Comdty', 'NG1 Comdty', 'XAUEUR Curncy'
+    ],
+    'Indices': [
+        'INDU Index', 'NDX Index', 'SPX Index', 'CAC Index'
+    ],
+    'Fixed Income': [
+        'GB3:GOV', 'GB6:GOV', 'GB12:GOV', 'GT2:GOV', 'GT5:GOV', 'GT10:GOV', 'GT30:GOV'
+    ]
+}
+
+# Flatten all tickers for easy access
+ALL_TICKERS = [ticker for group in TICKERS.values() for ticker in group]
+
+def load_and_process_csv(url, expected_tickers=None):
     """Load CSV from URL, handle comma as decimal, parse dates in DD/MM/YYYY format"""
     try:
         # Load all columns as string to handle comma decimals
@@ -39,6 +61,11 @@ def load_and_process_csv(url):
         # Sort index to ensure chronological order
         df = df.sort_index()
         
+        # If expected_tickers provided, filter to only those columns
+        if expected_tickers:
+            available_cols = [col for col in expected_tickers if col in df.columns]
+            df = df[available_cols]
+        
         return df
     except Exception as e:
         st.warning(f"Failed to load or process data from {url}: {str(e)}")
@@ -46,40 +73,14 @@ def load_and_process_csv(url):
 
 def load_real_data():
     """Load real data from CSV files on GitHub and combine relevant assets"""
-    # Load each CSV file with processing
-    commodities_df = load_and_process_csv(COMMODITIES_URL)
-    forex_df = load_and_process_csv(FOREX_URL)
-    indices_df = load_and_process_csv(INDICES_URL)
-    # fixed_income_df = load_and_process_csv(FIXED_INCOME_URL)  # Load if needed for yields
+    # Load each CSV file with processing and filter to expected tickers
+    commodities_df = load_and_process_csv(COMMODITIES_URL, TICKERS['Commodities'])
+    forex_df = load_and_process_csv(FOREX_URL, TICKERS['Forex'])
+    indices_df = load_and_process_csv(INDICES_URL, TICKERS['Indices'])
+    fixed_income_df = load_and_process_csv(FIXED_INCOME_URL, TICKERS['Fixed Income'])
     
-    # Combine indices from all sources
-    all_indices = commodities_df.index.union(forex_df.index.union(indices_df.index))
-    data = pd.DataFrame(index=all_indices)
-    
-    # Extract specific assets; treat as prices
-    selected_assets = []
-    
-    if not indices_df.empty and 'SPX Index' in indices_df.columns:
-        data['SPX Index'] = indices_df['SPX Index']
-        selected_assets.append('SPX Index')
-    # else:
-    #     st.warning("SPX Index not found or failed to load.")
-    
-    # Try Forex for XAUUSD Curncy, fallback to Commodities
-    if not forex_df.empty and 'XAUUSD Curncy' in forex_df.columns:
-        data['XAUUSD Curncy'] = forex_df['XAUUSD Curncy']
-        selected_assets.append('XAUUSD Curncy')
-    elif not commodities_df.empty and 'XAUUSD Curncy' in commodities_df.columns:
-        data['XAUUSD Curncy'] = commodities_df['XAUUSD Curncy']
-        selected_assets.append('XAUUSD Curncy')
-    # else:
-    #     st.warning("XAUUSD Curncy not found.")
-    
-    if not commodities_df.empty and 'CL1 Comdty' in commodities_df.columns:
-        data['CL1 Comdty'] = commodities_df['CL1 Comdty']
-        selected_assets.append('CL1 Comdty')
-    # else:
-    #     st.warning("CL1 Comdty not found.")
+    # Combine all dataframes on date index
+    data = pd.concat([commodities_df, forex_df, indices_df, fixed_income_df], axis=1)
     
     # Drop rows with all NaNs
     data = data.dropna(how='all')
@@ -93,7 +94,26 @@ def load_real_data():
     # Remove any rows with NaT in index
     data = data[data.index.notna()]
     
-    return data, selected_assets
+    # Get available assets (tickers with data)
+    available_assets = [col for col in data.columns if not data[col].dropna().empty]
+    
+    return data, available_assets
+
+def compute_returns(data, period='daily'):
+    """Compute returns for the data"""
+    if period == 'daily':
+        returns = data.pct_change()
+    return returns
+
+def compute_correlation_matrix(returns):
+    """Compute correlation matrix"""
+    corr_matrix = returns.corr()
+    return corr_matrix
+
+def compute_rolling_correlation(returns, ticker1, ticker2, window):
+    """Compute rolling correlation between two tickers"""
+    rolling_corr = returns[ticker1].rolling(window=window).corr(returns[ticker2])
+    return rolling_corr
 
 def main():
     st.title("Market Dashboard Skema")
@@ -101,7 +121,7 @@ def main():
     
     # Load real data
     try:
-        data, default_assets = load_real_data()
+        data, available_assets = load_real_data()
         if data.empty:
             st.error("No data loaded successfully. Please check the URLs and file contents.")
             return
@@ -124,19 +144,18 @@ def main():
     )
     
     # Asset selection
-    available_assets = list(data.columns)
     selected_assets = st.sidebar.multiselect(
         "Select Assets",
         available_assets,
-        default=default_assets  # Default to loaded assets
+        default=available_assets[:3] if available_assets else []  # Default to first 3 available
     )
     
-    # Market regime indicator (random for demo; can compute from data)
+    # Market regime indicator (placeholder; can compute from data if needed)
     st.sidebar.markdown("### Current Market Regime")
     current_regime = np.random.choice(['Growth', 'Recession', 'Inflation', 'Deflation'])
     st.sidebar.metric("Regime", current_regime)
     
-    # Key metrics (sample; can compute from data)
+    # Key metrics (computed from data if possible; placeholder for now)
     st.sidebar.markdown("### Key Indicators")
     st.sidebar.metric("Growth", "2.1%", "0.3%")
     st.sidebar.metric("Inflation", "3.2%", "-0.1%")
@@ -189,45 +208,36 @@ def main():
                         delta_str = "N/A"
                     st.metric(
                         asset.replace('_', ' '), 
-                        f"${latest_prices[asset]:.2f}",
+                        f"{latest_prices[asset]:.2f}",
                         delta_str
                     )
                 else:
                     st.metric(asset.replace('_', ' '), "N/A", "N/A")
     
-    # Term structure section (hardcoded; adapt with real data if available)
-    st.header("Futures Term Structure")
-    col3, col4 = st.columns(2)
+    # Removed hardcoded term structure section; replace with CSV data if futures curves are added in future
     
-    with col3:
-        st.subheader("Gold Futures")
-        contracts = ['Dec24', 'Mar25', 'Jun25', 'Sep25']
-        prices = [2010, 2015, 2020, 2025]
-        term_data = pd.DataFrame({'Price': prices}, index=contracts)
-        st.bar_chart(term_data)
-    
-    with col4:
-        st.subheader("Oil Futures")
-        oil_prices = [78, 79, 80, 81]
-        oil_data = pd.DataFrame({'Price': oil_prices}, index=contracts)
-        st.bar_chart(oil_data)
-    
-    # Yield curves (hardcoded; adapt with real data if available)
+    # Yield curves (using fixed income data if available)
     st.header("Bond Yield Curves")
     col5, col6 = st.columns(2)
     
     with col5:
-        st.subheader("US Treasury")
-        maturities = ['3M', '6M', '1Y', '2Y', '5Y', '10Y', '30Y']
-        us_yields = [5.2, 5.1, 4.8, 4.5, 4.2, 4.3, 4.5]
-        us_data = pd.DataFrame({'Yield': us_yields}, index=maturities)
-        st.line_chart(us_data)
+        st.subheader("US Treasury Yields")
+        treasury_tickers = TICKERS['Fixed Income']
+        if any(t in filtered_data.columns for t in treasury_tickers):
+            # Get latest yields
+            latest_yields = filtered_data[treasury_tickers].iloc[-1].dropna()
+            if not latest_yields.empty:
+                maturities = [t.split(':')[0] for t in latest_yields.index]  # e.g., 'GB3', 'GT10'
+                us_data = pd.DataFrame({'Yield': latest_yields.values}, index=maturities)
+                st.line_chart(us_data)
+            else:
+                st.warning("No US Treasury yield data available.")
+        else:
+            st.warning("No US Treasury yield data available.")
     
     with col6:
-        st.subheader("German Bunds")
-        german_yields = [3.5, 3.4, 3.2, 2.8, 2.5, 2.4, 2.6]
-        german_data = pd.DataFrame({'Yield': german_yields}, index=maturities)
-        st.line_chart(german_data)
+        st.subheader("Other Yield Curves")
+        st.info("Additional yield curves (e.g., German Bunds) not available in current CSV data.")
     
     # Performance comparison table (calculating returns from prices)
     st.header("Asset Performance Comparison")
@@ -278,7 +288,49 @@ def main():
     else:
         st.warning("No performance data available.")
     
-    # Additional metrics section (sample)
+    # New Module: Correlation Matrix
+    st.header("Correlation Matrix")
+    if selected_assets and len(selected_assets) >= 2 and not filtered_data.empty:
+        returns = compute_returns(filtered_data[selected_assets])
+        corr_matrix = compute_correlation_matrix(returns)
+        
+        # Display as heatmap
+        fig, ax = plt.subplots(figsize=(10, 8))
+        sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', ax=ax)
+        st.pyplot(fig)
+    else:
+        st.warning("Select at least two assets to compute correlation matrix.")
+    
+    # New Module: Rolling Correlations (1W, 1M, 3M)
+    st.header("Rolling Correlations")
+    if available_assets:
+        # Select two tickers for correlation
+        ticker1 = st.selectbox("Select First Ticker", available_assets)
+        ticker2 = st.selectbox("Select Second Ticker", available_assets)
+        
+        if ticker1 and ticker2 and ticker1 != ticker2:
+            returns = compute_returns(filtered_data[[ticker1, ticker2]])
+            
+            # Define windows
+            windows = {
+                '1W (7 days)': 7,
+                '1M (30 days)': 30,
+                '3M (90 days)': 90
+            }
+            
+            selected_window = st.selectbox("Select Rolling Window", list(windows.keys()))
+            window_size = windows[selected_window]
+            
+            rolling_corr = compute_rolling_correlation(returns, ticker1, ticker2, window_size)
+            
+            # Plot rolling correlation
+            st.line_chart(rolling_corr)
+        else:
+            st.warning("Select two different tickers to compute rolling correlation.")
+    else:
+        st.warning("No assets available for correlation analysis.")
+    
+    # Additional metrics section (placeholder)
     st.header("Market Regime Analysis")
     
     col7, col8, col9 = st.columns(3)
@@ -297,8 +349,8 @@ def main():
     
     # Footer
     st.markdown("---")
-    st.markdown("*Data loaded from GitHub CSV files. Treating as price data; returns calculated accordingly.*")
-    st.markdown("**Features:** Real-time regime detection • Multi-asset monitoring • Term structure analysis")
+    st.markdown("*Data loaded from GitHub CSV files. All hardcoded data replaced with CSV-loaded tickers.*")
+    st.markdown("**Features:** Real-time regime detection • Multi-asset monitoring • Correlation analysis")
 
 if __name__ == "__main__":
     main()
