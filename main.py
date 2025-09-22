@@ -28,9 +28,6 @@ TICKERS = {
     ]
 }
 
-# US Treasury tickers (assuming GT* are US Treasuries)
-US_TREASURY_TICKERS = [t for t in TICKERS['Fixed Income'] if t.startswith('GT')]
-
 # Flatten all tickers for easy access
 ALL_TICKERS = [ticker for group in TICKERS.values() for ticker in group]
 
@@ -372,4 +369,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
