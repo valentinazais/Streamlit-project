@@ -1,0 +1,267 @@
+	Ticker	Name		Region	Currency Pair		Global Fixed Income Indices			SPX Index	
+Commodity Indices				Americas			Ticker	Name		CCMP Index	CCMP Index
+	BCOMTR Index	Bloomberg Commodity Index		USD-CAD	US Dollar to Canadian Dollar		LEGATRUU:IND	Global Aggregate		NYA Index	NYA Index
+	CMCITR Index	UBS Bloomberg CMCI		USD-MXN	US Dollar to Mexican Peso		LBUSTRUU:IND	U.S. Aggregate		SPTSX Index	SPTSX Index
+	CRYTR Index	Reuters/Jefferies CRB		USD-BRL	US Dollar to Brazilian Real		LAPCTRJU:IND	Asian-Pacific Aggregate		SX5E Index	SX5E Index
+	RICIGLTR Index	Rogers International		USD-CLP	US Dollar to Chilean Peso		LP06TREU:IND	Pan-Euro Aggregate		UKX Index	UKX Index
+	SPGSCITR Index	S&P GSCI		USD-COP	US Dollar to Colombian Peso		EMUSTRUU:IND	EM USD Aggregate		DAX Index	DAX Index
+Energy - Crude Oil & Natural Gas				USD-PEN	US Dollar to Peruvian Sol		LF93TRUU:IND	Multiverse		CAC Index	CAC Index
+	CL1 Comdty	WTI Crude Oil (Nymex)		USD-VEF	US Dollar to Venezuelan Bolívar		LEGATRUH:IND	Global Aggregate (Hedged)		IBEX Index	IBEX Index
+	CO1 Comdty	Brent Crude (ICE)		USD-CRC	US Dollar to Costa Rican Colón		LGCPTRUH:IND	Corporate (Hedged)		NKY Index	NKY Index
+	CP1 Comdty	Crude Oil (Tokyo)		USD-ARS	US Dollar to Argentine Peso		LEGATREH:IND	Global Aggregate (EUR Hedged)		TPX Index	TPX Index
+	NG1 Comdty	Natural Gas (Nymex)		EMEA (Europe, Middle East & Africa)			LEGATRCH:IND	Global Aggregate (CHF Hedged)		HSI Index	HSI Index
+Energy - Refined Products				EUR-USD	Euro to US Dollar		LGCPTRUU:IND	Corporate		SHSZ300 Index	SHSZ300 Index
+	XB1 Comdty	RBOB Gasoline (Nymex)		GBP-USD	British Pound to US Dollar		LGCPTREH:IND	Corporate (EUR Hedged)		AS51 Index	AS51 Index
+	HO1 Comdty	Heating Oil (Nymex)		USD-CHF	US Dollar to Swiss Franc		LGCPTRGH:IND	Corporate (GBP Hedged)		MXAP Index	MXAP Index
+	QS1 Comdty	Gasoil (Nymex)		USD-SEK	US Dollar to Swedish Krona		LGCPTRCH:IND	Corporate (CHF Hedged)		DM1 Index	DM1 Index
+	JX1 Comdty	Kerosene (Tokyo)		USD-DKK	US Dollar to Danish Krone		BTSYTRUU:IND	Global Treasury		ES1 Index	ES1 Index
+Energy - Emissions				USD-NOK	US Dollar to Norwegian Krone		BTSYTRUH:IND	Global Treasury (Hedged)		NQ1 Index	NQ1 Index
+	MO1 Comdty	ECX Emissions (ICE)		USD-CZK	US Dollar to Czech Koruna		BTSYTREH:IND	Global Treasury (EUR Hedged)		IS1 Index	IS1 Index
+Precious Metals - Gold				USD-SKK	US Dollar to Slovak Koruna		BTSYTRCH:IND	Global Treasury (CHF Hedged)		SCT1 Index	SCT1 Index
+	GC1 Comdty	Gold (Comex)		USD-PLN	US Dollar to Polish Zloty		LG30TRUU:IND	Global High Yield		PT1 Index	PT1 Index
+	JG1 Comdty	Gold (Tokyo)		USD-HUF	US Dollar to Hungarian Forint		LG30TRUH:IND	Global High Yield (Hedged)		BZ1 Index	BZ1 Index
+	XAUUSD Curncy	Gold Spot		USD-RUB	US Dollar to Russian Ruble		LG30TREH:IND	Global High Yield (EUR Hedged)		LB1 Index	LB1 Index
+	XAUEUR Curncy	Gold/Euro Spot		USD-TRY	US Dollar to Turkish Lira		LG30TRCH:IND	Global High Yield (CHF Hedged)		VG1 Index	VG1 Index
+	XAUGBP Curncy	Gold/British Pound Spot		USD-ILS	US Dollar to Israeli Shekel		LC07TRUU:IND	U.S. Universal		Z 1 Index	Z 1 Index
+	XAUJPY Curncy	Gold/Japanese Yen Spot		USD-KES	US Dollar to Kenyan Shilling		LUATTRUU:IND	U.S. Treasury		GX1 Index	GX1 Index
+	XAUINR Curncy	Gold/Indian Rupee Spot		USD-ZAR	US Dollar to South African Rand		LT12TRUU:IND	Short Treasury		CF1 Index	CF1 Index
+Precious Metals - Silver				USD-MAD	US Dollar to Moroccan Dirham		LBUTTRUU:IND	U.S. TIPS		AJ1 Index	AJ1 Index
+	SI1 Comdty	Silver (Comex)		APAC (Asia Pacific)			LUCRTRUU:IND	U.S. Credit		ST1 Index	ST1 Index
+	JI1 Comdty	Silver (Tokyo)		USD-JPY	US Dollar to Japanese Yen		LUICTRUU:IND	Intermediate		EO1 Index	EO1 Index
+	XAGUSD Curncy	Silver Spot		EUR-JPY	Euro to Japanese Yen		LUGCTRUU:IND	U.S. Gov/Credit		QC1 Index	QC1 Index
+	XAGEUR Curncy	Silver/Euro Spot		HKD-JPY	Hong Kong Dollar to Japanese Yen		LF97TRUU:IND	Intermediate		SM1 Index	SM1 Index
+	XAGGBP Curncy	Silver/British Pound Spot		USD-HKD	US Dollar to Hong Kong Dollar		LUMSTRUU:IND	U.S. MBS		OMW1 Index	OMW1 Index
+	XAGJPY Curncy	Silver/Japanese Yen Spot		USD-SGD	US Dollar to Singapore Dollar		LF98TRUU:IND	U.S. Corporate High Yield		ATT1 Index	ATT1 Index
+	XAGINR Curncy	Silver/Indian Rupee Spot		AUD-JPY	Australian Dollar to Japanese Yen		LMBITR:IND	Municipal Bond Index		PP1 Index	PP1 Index
+Precious Metals - Other				AUD-USD	Australian Dollar to US Dollar		LUACTRUU:IND	Corporate		IB1 Index	IB1 Index
+	XPTUSD Curncy	Platinum Spot		NZD-USD	New Zealand Dollar to US Dollar		LUTLTRUU:IND	Long		KRS1 Index	KRS1 Index
+	XPDUSD Curncy	Palladium Spot		USD-TWD	US Dollar to Taiwan Dollar		LG24TRJU:IND	Japanese Aggregate		XMC1 Index	XMC1 Index
+Industrial Metals				USD-KRW	US Dollar to South Korean Won		LG22TRUU:IND	Global Aggregate Ex-JPY		VE1 Index	VE1 Index
+	HG1 Comdty	Copper (Comex)		USD-PHP	US Dollar to Philippine Peso		LBEATREU:IND	Euro-Aggregate		A51 Index	A51 Index
+	LMCADS03 Comdty	3Mo Copper (LME)		USD-IDR	US Dollar to Indonesian Rupiah		LECPTREU:IND	Corporates		AI1 Index	AI1 Index
+	LMAHDS03 Comdty	3Mo Aluminum (LME)		USD-INR	US Dollar to Indian Rupee		LP01TREU:IND	Pan-European High Yield		XP1 Index	XP1 Index
+	LMZSDS03 Comdty	3Mo Zinc (LME)		USD-CNY	US Dollar to Chinese Yuan		LEF1TREU:IND	EURO FRN Index		IFB1 Index	IFB1 Index
+	LMSNDS03 Comdty	3Mo Tin (LME)		USD-MYR	US Dollar to Malaysian Ringgit		LEATTREU:IND	Treasury		XU1 Index	XU1 Index
+Agriculture - Grains				USD-THB	US Dollar to Thai Baht		LC58TRGU:IND	Sterling Aggregate		HI1 Index	HI1 Index
+	C 1 Comdty	Corn (CBOT)		JPY-MYR	Japanese Yen to Malaysian Ringgit		LSG1TRGU:IND	Gilts		HC1 Index	HC1 Index
+	W 1 Comdty	Wheat (CBOT)					EMLCTRUU:IND	EM Local Currency Govt		NZ1 Index	NZ1 Index
+	O 1 Comdty	Oats (CBOT)					BLXCTREU:IND	Euro Contingent Capital Bond I		SHY1 Index	SHY1 Index
+	RR1 Comdty	Rough Rice (CBOT)					BECLTRUU:IND	EM Local Currency Liquid Gover		NK1 Index	NK1 Index
+	S 1 Comdty	Soybean (CBOT)					LB17TRUU:IND	USHY B RBISUP&regSUP/BS1		TP1 Index	TP1 Index
+	SM1 Comdty	Soybean Meal (CBOT)					BCIW1T:IND	BCIW1T		CTRN Index	CTRN Index
+	BO1 Comdty	Soybean Oil (CBOT)					BCIT1T:IND	BCIT1T		SML Index	SML Index
+	RS1 Comdty	Canola (ICE)					BEIG1T:IND	BEIG1T		RTY Index	RTY Index
+Agriculture - Softs							BEMG0Z:IND	EM Inf Lnkd All Maturit		NBI Index	NBI Index
+	CC1 Comdty	Cocoa (ICE)					BCEE1T:IND	Euro Government		INDU Index	INDU Index
+	KC1 Comdty	Coffee 'C' (ICE)					US gov			CBNK Index	CBNK Index
+	SB1 Comdty	Sugar #11 (ICE)					GB3:GOV	3 Month Treasury		BBREIT Index	BBREIT Index
+	JO1 Comdty	Orange Juice (ICE)					GB6:GOV	6 Month Treasury		NYA Index	NYA Index
+	CT1 Comdty	Cotton #2 (ICE)					GB12:GOV	12 Month Treasury		NDX Index	NDX Index
+	OL1 Comdty	Wool (ASX)					GT2:GOV	2 Year Treasury		CFIN Index	CFIN Index
+	LB1 Comdty	Lumber (CME)					GT5:GOV	5 Year Treasury		CINS Index	CINS Index
+	OR1 Comdty	Rubber (Singapore)					GT10:GOV	10 Year Treasury		TRAN Index	TRAN Index
+	DL1 Comdty	Ethanol (CBOT)					GT30:GOV	30 Year Treasury		CUTL Index	CUTL Index
+Agriculture - Livestock							GTII5:GOV	5 Year TIPS		SPX Index	SPX Index
+	LC1 Comdty	Live Cattle (CME)					GTII10:GOV	10 Year TIPS		CCMP Index	CCMP Index
+	FC1 Comdty	Feeder Cattle (CME)					GTII20:GOV	20 Year TIPS		UTIL Index	UTIL Index
+	LH1 Comdty	Lean Hogs (CME)					GTII30:GOV	30 Year TIPS		BKX Index	BKX Index
+							FDFD:IND	Fed Funds Rate		RIY Index	RIY Index
+							FDTR:IND	Fed Reserve Target		NDF Index	NDF Index
+							PRIME:IND	Prime Rate		RAY Index	RAY Index
+							BVMB1Y:IND	Muni Bonds 1 Year		IXK Index	IXK Index
+							BVMB2Y:IND	Muni Bonds 2 Year		MID Index	MID Index
+							BVMB5Y:IND	Muni Bonds 5 Year		CIND Index	CIND Index
+							BVMB10Y:IND	Muni Bonds 10 Year		BSX Index	BSX Index
+							BVMB30Y:IND	Muni Bonds 30 Year		BURCAP Index	BURCAP Index
+							UK Gov			MERVAL Index	MERVAL Index
+							GTGBP2Y:GOV	UK Gilt 2 Year Yield		SPBL25PT Index	SPBL25PT Index
+							GTGBP5Y:GOV	UK Gilt 5 Year Yield		SPBLPGPT Index	SPBLPGPT Index
+							GTGBP10Y:GOV	UK Gilt 10 Year Yield		IBX Index	IBX Index
+							GTGBP30Y:GOV	UK Gilt 30 Year Yield		IBOV Index	IBOV Index
+							UKBRBASE:IND	Official Bank Rate		INMEX Index	INMEX Index
+							UKAPTARG:IND	Asset Purchase Program Target (Billions of GBP)		MEXBOL Index	MEXBOL Index
+							Germany			SPTSX60 Index	SPTSX60 Index
+							GTDEM2Y:GOV	Germany Bund 2 Year Yield		SPTSX Index	SPTSX Index
+							GTDEM5Y:GOV	Germany Bund 5 Year Yield		IGPA Index	IGPA Index
+							GTDEM10Y:GOV	Germany Bund 10 Year Yield		IPSA Index	IPSA Index
+							GTDEM30Y:GOV	Germany Bund 30 Year Yield		IBVC Index	IBVC Index
+							EURR002W:IND	Main Refinancing Rate		CRSMBCT Index	CRSMBCT Index
+							EBBSLONG:IND	ECB Balance Sheet (Billions of Euros)		BVPSBVPS Index	BVPSBVPS Index
+							Japan 			JMSMX Index	JMSMX Index
+							GTJPY2Y:GOV	JGB 2 Year Yield		COLCAP Index	COLCAP Index
+							GTJPY5Y:GOV	JGB 5 Year Yield		SPEURO Index	SPEURO Index
+							GTJPY10Y:GOV	JGB 10 Year Yield		BE500 Index	BE500 Index
+							GTJPY20Y:GOV	JGB 20 Year Yield		SXXP Index	SXXP Index
+							GTJPY30Y:GOV	JGB 30 Year Yield		SX5E Index	SX5E Index
+							BOJDTR:IND	Target Rate		SPEU Index	SPEU Index
+							BJACTOTL:IND	Bank of Japan Assets: Total (Billions of JPY)		AXX Index	AXX Index
+							Australia			UKX Index	UKX Index
+							GTAUD2Y:GOV	Australia Bond 2 Year Yield		ASX Index	ASX Index
+							GTAUD5Y:GOV	Australia Bond 5 Year Yield		KAX Index	KAX Index
+							GTAUD10Y:GOV	Australia Bond 10 Year Yield		KFX Index	KFX Index
+							GTAUD15Y:GOV	Australia Bond 15 Year Yield		OMXC25 Index	OMXC25 Index
+							RBATCTR:IND	RBA Cash Rate Target		WIG20 Index	WIG20 Index
+										WIG Index	WIG Index
+										WIG30 Index	WIG30 Index
+										SBF250 Index	SBF250 Index
+										CAC Index	CAC Index
+										XU100 Index	XU100 Index
+										XU030 Index	XU030 Index
+										BHSEEI Index	BHSEEI Index
+										BHSEASI Index	BHSEASI Index
+										HDAX Index	HDAX Index
+										DAX Index	DAX Index
+										DFMGI Index	DFMGI Index
+										ADSMI Index	ADSMI Index
+										IMOEX Index	IMOEX Index
+										RTSI$ Index	RTSI$ Index
+										ASE Index	ASE Index
+										FTASE Index	FTASE Index
+										TOP40 Index	TOP40 Index
+										JALSH Index	JALSH Index
+										HEX Index	HEX Index
+										HEX25 Index	HEX25 Index
+										PFTS Index	PFTS Index
+										UX Index	UX Index
+										SPI Index	SPI Index
+										SMI Index	SMI Index
+										NSEASI Index	NSEASI Index
+										KNSMIDX Index	KNSMIDX Index
+										KWSEPM Index	KWSEPM Index
+										KWSEMM Index	KWSEMM Index
+										BELEX15 Index	BELEX15 Index
+										BELEXLIN Index	BELEXLIN Index
+										OSEBX Index	OSEBX Index
+										OSEAX Index	OSEAX Index
+										BUX Index	BUX Index
+										CHTX Index	CHTX Index
+										IBEX Index	IBEX Index
+										MADX Index	MADX Index
+										AEX Index	AEX Index
+										AMX Index	AMX Index
+										ITLMS Index	ITLMS Index
+										FTSEMIB Index	FTSEMIB Index
+										SASX10 Index	SASX10 Index
+										BIRS Index	BIRS Index
+										BEL20 Index	BEL20 Index
+										BELPRC Index	BELPRC Index
+										LUXXX Index	LUXXX Index
+										LUXXR Index	LUXXR Index
+										PSI20 Index	PSI20 Index
+										BVLX Index	BVLX Index
+										TA-35 Index	TA-35 Index
+										TA-125 Index	TA-125 Index
+										MBI Index	MBI Index
+										MBIDM Index	MBIDM Index
+										ATX Index	ATX Index
+										ATXPRIME Index	ATXPRIME Index
+										OMX Index	OMX Index
+										SBX Index	SBX Index
+										TUSISE Index	TUSISE Index
+										MONEX Index	MONEX Index
+										SASEIDX Index	SASEIDX Index
+										BGSMDC Index	BGSMDC Index
+										DSM Index	DSM Index
+										JOSMGNFF Index	JOSMGNFF Index
+										SBITOP Index	SBITOP Index
+										PASISI Index	PASISI Index
+										NGXINDX Index	NGXINDX Index
+										ICEXI Index	ICEXI Index
+										FTN098 Index	FTN098 Index
+										CYSMMAPA Index	CYSMMAPA Index
+										BLOM Index	BLOM Index
+										MSM30 Index	MSM30 Index
+										SEMDEX Index	SEMDEX Index
+										ISEQ Index	ISEQ Index
+										SKSM Index	SKSM Index
+										CRO Index	CRO Index
+										MOSENEW Index	MOSENEW Index
+										DARSDSEI Index	DARSDSEI Index
+										SOFIX Index	SOFIX Index
+										MALTEX Index	MALTEX Index
+										RIGSE Index	RIGSE Index
+										TALSE Index	TALSE Index
+										BWORLDEU Index	BWORLDEU Index
+										KZKAK Index	KZKAK Index
+										BET Index	BET Index
+										VILSE Index	VILSE Index
+										GGSECI Index	GGSECI Index
+										PX Index	PX Index
+										TPX500 Index	TPX500 Index
+										TPX100 Index	TPX100 Index
+										NKY Index	NKY Index
+										NKY500 Index	NKY500 Index
+										TPX Index	TPX Index
+										NEY Index	NEY Index
+										TSEREIT Index	TSEREIT Index
+										JSDA Index	JSDA Index
+										TPXC30 Index	TPXC30 Index
+										TSEMOTHR Index	TSEMOTHR Index
+										TPXSM Index	TPXSM Index
+										TPXM400 Index	TPXM400 Index
+										NKYJQ Index	NKYJQ Index
+										TSE2 Index	TSE2 Index
+										TPXL70 Index	TPXL70 Index
+										SHCOMP Index	SHCOMP Index
+										SHASHR Index	SHASHR Index
+										SZASHR Index	SZASHR Index
+										SICOM Index	SICOM Index
+										SHBSHR Index	SHBSHR Index
+										SZBSHR Index	SZBSHR Index
+										SSE50 Index	SSE50 Index
+										SSE180 Index	SSE180 Index
+										SHNCOMP Index	SHNCOMP Index
+										SZ399006 Index	SZ399006 Index
+										SHSZ300 Index	SHSZ300 Index
+										SZCOMP Index	SZCOMP Index
+										HSML100 Index	HSML100 Index
+										H-FIN Index	H-FIN Index
+										HKSPGEM Index	HKSPGEM Index
+										SAXCME Index	SAXCME Index
+										HSFML25 Index	HSFML25 Index
+										HKSPLC25 Index	HKSPLC25 Index
+										HSI Index	HSI Index
+										HSCEI Index	HSCEI Index
+										HSHK35 Index	HSHK35 Index
+										HSCCI Index	HSCCI Index
+										HSCI Index	HSCI Index
+										KOSDAQ Index	KOSDAQ Index
+										KRX100 Index	KRX100 Index
+										KOSPI Index	KOSPI Index
+										KOSPI2 Index	KOSPI2 Index
+										KOSPI50 Index	KOSPI50 Index
+										KOSTAR Index	KOSTAR Index
+										KOSPI100 Index	KOSPI100 Index
+										BSE100 Index	BSE100 Index
+										SENSEX Index	SENSEX Index
+										NZX20 Index	NZX20 Index
+										NIFTY Index	NIFTY Index
+										BSE500 Index	BSE500 Index
+										BSE200 Index	BSE200 Index
+										TWSE Index	TWSE Index
+										TW50 Index	TW50 Index
+										TWOTCI Index	TWOTCI Index
+										AS51 Index	AS51 Index
+										AS52 Index	AS52 Index
+										AS30 Index	AS30 Index
+										KSE100 Index	KSE100 Index
+										KSE30 Index	KSE30 Index
+										KSE Index	KSE Index
+										NZSE Index	NZSE Index
+										NZSE50FG Index	NZSE50FG Index
+										NZSE10 Index	NZSE10 Index
+										FBMKLCI Index	FBMKLCI Index
+										FBMEMAS Index	FBMEMAS Index
+										JCI Index	JCI Index
+										LQ45 Index	LQ45 Index
+										STI Index	STI Index
+										FSTAS Index	FSTAS Index
+										SET50 Index	SET50 Index
+										SET Index	SET Index
+										VHINDEX Index	VHINDEX Index
+										VNINDEX Index	VNINDEX Index
+										DSEX Index	DSEX Index
+										MSETOP Index	MSETOP Index
+										LSXC Index	LSXC Index
+										PCOMP Index	PCOMP Index
+										CSEALL Index	CSEALL Index
