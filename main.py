@@ -11,24 +11,46 @@ FOREX_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/r
 FIXED_INCOME_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/FixedIncome_2Y.tsv"
 INDICES_URL = "https://raw.githubusercontent.com/valentinazais/Streamlit-project/refs/heads/main/Indices_2Y.tsv"
 
+def load_and_process_tsv(url):
+    """Load TSV from URL, handle comma as decimal, parse dates"""
+    # Load all columns as string to handle comma decimals
+    df = pd.read_csv(url, sep='\t', dtype=str)
+    
+    # Assume first column is 'Dates'
+    if 'Dates' not in df.columns:
+        raise ValueError(f"'Dates' column not found in data from {url}")
+    
+    # Parse dates
+    df['Dates'] = pd.to_datetime(df['Dates'], errors='coerce')
+    
+    # For all other columns (assumed numeric), replace ',' with '.' and convert to float
+    for col in df.columns:
+        if col != 'Dates':
+            df[col] = df[col].str.replace(',', '.', regex=False)
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+    
+    # Set index to 'Dates' and drop any rows with invalid dates
+    df = df.set_index('Dates').dropna(how='all')
+    
+    return df
+
 def load_real_data():
     """Load real data from TSV files on GitHub and combine relevant assets"""
-    # Load each TSV file (assuming they have 'Date' as the first column and asset names as columns)
-    # Parse dates and set index
-    commodities_df = pd.read_csv(COMMODITIES_URL, sep='\t', parse_dates=['Date'], index_col='Date')
-    forex_df = pd.read_csv(FOREX_URL, sep='\t', parse_dates=['Date'], index_col='Date')
-    indices_df = pd.read_csv(INDICES_URL, sep='\t', parse_dates=['Date'], index_col='Date')
+    # Load each TSV file with processing
+    commodities_df = load_and_process_tsv(COMMODITIES_URL)
+    forex_df = load_and_process_tsv(FOREX_URL)
+    indices_df = load_and_process_tsv(INDICES_URL)
     # FixedIncome not needed for the main assets, but loaded if required later
-    # fixed_income_df = pd.read_csv(FIXED_INCOME_URL, sep='\t', parse_dates=['Date'], index_col='Date')
+    # fixed_income_df = load_and_process_tsv(FIXED_INCOME_URL)
     
     # Extract specific columns based on user's mapping
     # Assuming:
     # - 'SPX Index' is in Indices
-    # - 'XAUUSD Curncy' might be in Forex or Commodities (I'll check Forex first, fallback to Commodities)
+    # - 'XAUUSD Curncy' might be in Forex or Commodities
     # - 'CL1 Comdty' is in Commodities
     # For now, forgetting USD_Index and VIX
     
-    data = pd.DataFrame()
+    data = pd.DataFrame(index=indices_df.index.union(commodities_df.index.union(forex_df.index)))
     
     if 'SPX Index' in indices_df.columns:
         data['SPX Index'] = indices_df['SPX Index']
@@ -48,8 +70,8 @@ def load_real_data():
     else:
         st.error("CL1 Comdty not found in Commodities data.")
     
-    # Drop any rows with missing values (or handle NaNs as needed)
-    data = data.dropna()
+    # Align indices and drop rows with all NaNs
+    data = data.dropna(how='all')
     
     # Ensure index is datetime
     data.index = pd.to_datetime(data.index)
@@ -200,7 +222,13 @@ def main():
     
     for asset in available_assets:
         row_data = {'Asset': asset.replace('_', ' ')}
-        asset_series = data[asset]
+        asset_series = data[asset].dropna()  # Drop NaNs for this asset
+        
+        if asset_series.empty:
+            for period in periods:
+                row_data[period] = "N/A"
+            performance_data.append(row_data)
+            continue
         
         for period in periods:
             if period == '1M':
@@ -215,9 +243,11 @@ def main():
             end_date = asset_series.index.max()
             start_date = end_date - timedelta(days=days)
             
-            if start_date >= asset_series.index.min():
-                start_price = asset_series[asset_series.index >= start_date].iloc[0]
-                end_price = asset_series.iloc[-1]
+            # Find the closest start date available
+            start_prices = asset_series[asset_series.index >= start_date]
+            if not start_prices.empty:
+                start_price = start_prices.iloc[0]
+                end_price = asset_series.loc[end_date]
                 perf = ((end_price - start_price) / start_price) * 100
                 row_data[period] = f"{perf:.1f}%"
             else:
