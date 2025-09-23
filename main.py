@@ -522,9 +522,9 @@ def main():
                 if len(forex_data) > 1:
                     prev = forex_data[ticker].iloc[-2]
                     delta = ((latest - prev) / prev) * 100
-                    st.metric(f"Latest Rate for {region} ({ticker})", f"{latest:.4f}", f"{delta:.2f}%")
+                    st.metric(f"Latest Rate for {ticker}", f"{latest:.4f}", f"{delta:.2f}%")
                 else:
-                    st.metric(f"Latest Rate for {region} ({ticker})", f"{latest:.4f}", "N/A")
+                    st.metric(f"Latest Rate for {ticker}", f"{latest:.4f}", "N/A")
             else:
                 st.warning(f"No data for {ticker}")
     
@@ -709,3 +709,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
