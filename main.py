@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+import re
+import altair as alt
 
 st.set_page_config(page_title="Cross-Asset Market Regime Monitor", layout="wide")
 
@@ -116,8 +118,6 @@ def compute_rolling_correlation(returns, ticker1, ticker2, window):
     rolling_corr = returns[ticker1].rolling(window=window).corr(returns[ticker2])
     return rolling_corr
 
-import re  # Add this import at the top of your script for regex support
-
 def get_yield_curve_data(data, tickers, yc_datetime):
     # Find the closest date in the index (nearest previous if not exact)
     if yc_datetime in data.index:
@@ -134,42 +134,41 @@ def get_yield_curve_data(data, tickers, yc_datetime):
     if not selected_yields.empty:
         # Extract maturities (e.g., '3M' from 'GB3 Govt', '2Y' from 'GT2 Govt')
         maturities = []
+        months_list = []  # New: track months for explicit sorting
         for t in selected_yields.index:
             # Use regex to extract the numeric part cleanly (removes 'GB', 'GT', ' Govt', and trims)
             maturity_num = re.sub(r'GB|GT| Govt', '', t).strip()
             if maturity_num.isdigit():  # Ensure it's a number
+                num = int(maturity_num)
                 if t.startswith('GB'):
                     if maturity_num == '12':
-                        maturities.append('1Y')  # Treat 12 as 1Y
+                        maturities.append('1Y')
+                        months_list.append(12)  # 1Y = 12 months
                     else:
                         maturities.append(maturity_num + 'M')
+                        months_list.append(num)  # e.g., 3M = 3 months
                 elif t.startswith('GT'):
                     maturities.append(maturity_num + 'Y')
+                    months_list.append(num * 12)  # e.g., 2Y = 24 months
                 else:
                     maturities.append(t)  # Fallback
+                    months_list.append(0)
             else:
                 maturities.append(t)  # Fallback if parsing fails
+                months_list.append(0)
         
-        yc_data = pd.DataFrame({'Yield': selected_yields.values}, index=maturities)
+        yc_data = pd.DataFrame({
+            'Maturity': maturities,
+            'Yield': selected_yields.values,
+            'Months': months_list  # New column for sorting
+        })
         
-        # Sort by maturity: convert to months for sorting (e.g., '3M' -> 3, '2Y' -> 24)
-        def maturity_to_months(m):
-            try:
-                if 'Y' in m:
-                    return int(m.rstrip('Y')) * 12
-                elif 'M' in m:
-                    return int(m.rstrip('M'))
-                else:
-                    return 0
-            except ValueError:
-                st.warning(f"Failed to parse maturity '{m}' for sorting. Treating as 0 months.")
-                return 0
-        
-        yc_data = yc_data.sort_index(key=lambda x: [maturity_to_months(m) for m in x])
+        # Sort by 'Months' to ensure order from shortest to longest maturity
+        yc_data = yc_data.sort_values(by='Months').reset_index(drop=True)
         
         return yc_data
     return pd.DataFrame()
-    
+
 def main():
     st.title("Market Dashboard Skema")
     st.markdown("*Using real price data from GitHub CSV files*")
@@ -287,7 +286,18 @@ def main():
     if US_FIXED_INCOME_TICKERS and any(t in data.columns for t in US_FIXED_INCOME_TICKERS):
         us_yc_data = get_yield_curve_data(data, US_FIXED_INCOME_TICKERS, yc_datetime)
         if not us_yc_data.empty:
-            st.line_chart(us_yc_data)
+            # Custom Altair chart for explicit x-order (shortest to longest)
+            yc_chart = alt.Chart(us_yc_data).mark_line(point=True).encode(
+                x=alt.X('Maturity:N', sort=None, title='Maturity'),  # Use 'Maturity' column, respect DataFrame order
+                y=alt.Y('Yield:Q', title='Yield (%)'),
+                tooltip=['Maturity', 'Yield']
+            ).properties(
+                width=700,
+                height=400,
+                title='US Treasury Yield Curve'
+            ).interactive()
+            
+            st.altair_chart(yc_chart, use_container_width=True)
         else:
             st.warning(f"No US Treasury yield data available for {yc_date} or nearest previous date.")
     else:
@@ -404,4 +414,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
