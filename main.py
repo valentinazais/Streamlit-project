@@ -36,41 +36,27 @@ ALL_TICKERS = [ticker for group in TICKERS.values() for ticker in group]
 
 def load_and_process_csv(url, expected_tickers=None):
     """Load CSV from URL, handle comma as decimal, parse dates in DD/MM/YYYY format"""
-    try:
-        # Load all columns as string to handle comma decimals
-        df = pd.read_csv(url, sep=';', dtype=str)
-        
-        # Assume first column is 'Dates'
-        if 'Dates' not in df.columns:
-            raise ValueError(f"'Dates' column not found in data from {url}")
-        
-        # Parse dates with DD/MM/YYYY format
-        df['Dates'] = pd.to_datetime(df['Dates'], format='%d/%m/%Y', errors='coerce')
-        
-        # Drop rows where 'Dates' is NaT
-        df = df.dropna(subset=['Dates'])
-        
-        # For all other columns (assumed numeric), replace ',' with '.' and convert to float
-        for col in df.columns:
-            if col != 'Dates':
-                df[col] = df[col].str.replace(',', '.', regex=False)
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-        
-        # Set index to 'Dates' and drop any rows with all NaN values
-        df = df.set_index('Dates').dropna(how='all')
-        
-        # Sort index to ensure chronological order
-        df = df.sort_index()
-        
-        # If expected_tickers provided, filter to only those columns
-        if expected_tickers:
-            available_cols = [col for col in expected_tickers if col in df.columns]
-            df = df[available_cols]
-        
-        return df
-    except Exception as e:
-        st.warning(f"Failed to load or process data from {url}: {str(e)}")
-        return pd.DataFrame()  # Return empty DataFrame on failure
+    df = pd.read_csv(url, sep=';', dtype=str)
+    
+    # Assume first column is 'Dates'
+    df['Dates'] = pd.to_datetime(df['Dates'], format='%d/%m/%Y', errors='coerce')
+    df = df.dropna(subset=['Dates'])
+    
+    # For all other columns (assumed numeric), replace ',' with '.' and convert to float
+    for col in df.columns:
+        if col != 'Dates':
+            df[col] = df[col].str.replace(',', '.', regex=False)
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+    
+    # Set index to 'Dates' and drop any rows with all NaN values
+    df = df.set_index('Dates').dropna(how='all').sort_index()
+    
+    # If expected_tickers provided, filter to only those columns
+    if expected_tickers:
+        available_cols = [col for col in expected_tickers if col in df.columns]
+        df = df[available_cols]
+    
+    return df
 
 def load_real_data():
     """Load real data from CSV files on GitHub and combine relevant assets"""
@@ -83,17 +69,11 @@ def load_real_data():
     # Combine all dataframes on date index
     data = pd.concat([commodities_df, forex_df, indices_df, fixed_income_df], axis=1)
     
-    # Drop rows with all NaNs
-    data = data.dropna(how='all')
-    
-    # Sort index
-    data = data.sort_index()
+    # Drop rows with all NaNs and sort
+    data = data.dropna(how='all').sort_index()
     
     # Ensure index is datetime
     data.index = pd.to_datetime(data.index)
-    
-    # Remove any rows with NaT in index
-    data = data[data.index.notna()]
     
     # Get available assets (tickers with data)
     available_assets = [col for col in data.columns if not data[col].dropna().empty]
@@ -121,7 +101,6 @@ def get_yield_curve_data(data, tickers, yc_datetime):
     if yc_datetime in data.index:
         selected_yields = data.loc[yc_datetime, tickers].dropna()
     else:
-        # Get the nearest previous date
         prev_dates = data.index[data.index <= yc_datetime]
         if not prev_dates.empty:
             nearest_date = prev_dates.max()
@@ -134,13 +113,13 @@ def get_yield_curve_data(data, tickers, yc_datetime):
         maturities = []
         for t in selected_yields.index:
             if t.startswith('GB'):
-                maturity_num = t.replace('GB', '').replace(' GOV', '')
+                maturity_num = t.replace('GB', '').replace(' Govt', '')
                 if maturity_num == '12':
                     maturities.append('1Y')  # Treat 12 as 1Y
                 else:
                     maturities.append(maturity_num + 'M')
             elif t.startswith('GT'):
-                maturity_num = t.replace('GT', '').replace(' GOV', '')
+                maturity_num = t.replace('GT', '').replace(' Govt', '')
                 maturities.append(maturity_num + 'Y')
             else:
                 maturities.append(t)  # Fallback
@@ -166,21 +145,17 @@ def main():
     st.markdown("*Using real price data from GitHub CSV files*")
     
     # Load real data
-    try:
-        data, available_assets = load_real_data()
-        if data.empty:
-            st.error("No data loaded successfully. Please check the URLs and file contents.")
-            return
-    except Exception as e:
-        st.error(f"Error loading data: {str(e)}")
+    data, available_assets = load_real_data()
+    if data.empty:
+        st.error("No data loaded successfully. Please check the URLs and file contents.")
         return
     
     # Sidebar
     st.sidebar.header("Filters")
     
     # Date range
-    min_date = data.index.min().date() if not data.empty else datetime.now().date()
-    max_date = data.index.max().date() if not data.empty else datetime.now().date()
+    min_date = data.index.min().date()
+    max_date = data.index.max().date()
     
     date_range = st.sidebar.date_input(
         "Select Date Range",
@@ -395,4 +370,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
