@@ -359,7 +359,7 @@ def main():
         st.warning("No performance data available.")
     
     # Correlation Matrix
-    st.header("Correlation Matrix")
+    st.header("Correlation Matrix (side bar)")
     if selected_assets and len(selected_assets) >= 2 and not filtered_data.empty:
         returns = compute_returns(filtered_data[selected_assets])
         corr_matrix = compute_correlation_matrix(returns)
@@ -420,3 +420,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
