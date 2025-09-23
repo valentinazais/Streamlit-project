@@ -116,6 +116,8 @@ def compute_rolling_correlation(returns, ticker1, ticker2, window):
     rolling_corr = returns[ticker1].rolling(window=window).corr(returns[ticker2])
     return rolling_corr
 
+import re  # Add this import at the top of your script for regex support
+
 def get_yield_curve_data(data, tickers, yc_datetime):
     # Find the closest date in the index (nearest previous if not exact)
     if yc_datetime in data.index:
@@ -130,37 +132,44 @@ def get_yield_curve_data(data, tickers, yc_datetime):
             selected_yields = pd.Series()
     
     if not selected_yields.empty:
-        # Extract maturities (e.g., '3M' from 'GB3 GOV', '2Y' from 'GT2 GOV')
+        # Extract maturities (e.g., '3M' from 'GB3 Govt', '2Y' from 'GT2 Govt')
         maturities = []
         for t in selected_yields.index:
-            if t.startswith('GB'):
-                maturity_num = t.replace('GB', '').replace(' GOV', '')
-                if maturity_num == '12':
-                    maturities.append('1Y')  # Treat 12 as 1Y
+            # Use regex to extract the numeric part cleanly (removes 'GB', 'GT', ' Govt', and trims)
+            maturity_num = re.sub(r'GB|GT| Govt', '', t).strip()
+            if maturity_num.isdigit():  # Ensure it's a number
+                if t.startswith('GB'):
+                    if maturity_num == '12':
+                        maturities.append('1Y')  # Treat 12 as 1Y
+                    else:
+                        maturities.append(maturity_num + 'M')
+                elif t.startswith('GT'):
+                    maturities.append(maturity_num + 'Y')
                 else:
-                    maturities.append(maturity_num + 'M')
-            elif t.startswith('GT'):
-                maturity_num = t.replace('GT', '').replace(' GOV', '')
-                maturities.append(maturity_num + 'Y')
+                    maturities.append(t)  # Fallback
             else:
-                maturities.append(t)  # Fallback
+                maturities.append(t)  # Fallback if parsing fails
         
         yc_data = pd.DataFrame({'Yield': selected_yields.values}, index=maturities)
         
         # Sort by maturity: convert to months for sorting (e.g., '3M' -> 3, '2Y' -> 24)
         def maturity_to_months(m):
-            if 'Y' in m:
-                return int(m.rstrip('Y')) * 12
-            elif 'M' in m:
-                return int(m.rstrip('M'))
-            else:
+            try:
+                if 'Y' in m:
+                    return int(m.rstrip('Y')) * 12
+                elif 'M' in m:
+                    return int(m.rstrip('M'))
+                else:
+                    return 0
+            except ValueError:
+                st.warning(f"Failed to parse maturity '{m}' for sorting. Treating as 0 months.")
                 return 0
         
         yc_data = yc_data.sort_index(key=lambda x: [maturity_to_months(m) for m in x])
         
         return yc_data
     return pd.DataFrame()
-
+    
 def main():
     st.title("Market Dashboard Skema")
     st.markdown("*Using real price data from GitHub CSV files*")
@@ -395,3 +404,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
