@@ -36,6 +36,19 @@ US_FIXED_INCOME_TICKERS = TICKERS['Fixed Income']
 # Flatten all tickers for easy access
 ALL_TICKERS = [ticker for group in TICKERS.values() for ticker in group]
 
+# Region-specific groupings (based on user request; note: TPX500 not in current data, using available)
+FOREX_REGIONS = {
+    'USA': 'USDCAD Curncy',  # USD-CAD for USA
+    'EMEA': 'EURUSD Curncy',  # EUR-USD for EMEA
+    'Asia': 'USDJPY Curncy'   # USD-JPY for Asia
+}
+
+INDICES_REGIONS = {
+    'US': 'SPX Index',    # SPX for US
+    'EMEA': 'CAC Index',  # CAC for EMEA
+    'Asia': 'NDX Index'   # Placeholder; TPX500 not available, using NDX (adjust CSV if needed)
+}
+
 def load_and_process_csv(url, expected_tickers=None):
     """Load CSV from URL, handle comma as decimal, parse dates in DD/MM/YYYY format"""
     try:
@@ -169,6 +182,149 @@ def get_yield_curve_data(data, tickers, yc_datetime):
         return yc_data
     return pd.DataFrame()
 
+def compute_market_regime(data):
+    """Compute market regime based on yield curve inversion (simple logic)"""
+    latest_date = data.index.max()
+    yc_data = get_yield_curve_data(data, US_FIXED_INCOME_TICKERS, latest_date)
+    if not yc_data.empty:
+        short_yield = yc_data[yc_data['Maturity'] == '2Y']['Yield'].values[0] if '2Y' in yc_data['Maturity'].values else np.nan
+        long_yield = yc_data[yc_data['Maturity'] == '10Y']['Yield'].values[0] if '10Y' in yc_data['Maturity'].values else np.nan
+        if not np.isnan(short_yield) and not np.isnan(long_yield):
+            if short_yield > long_yield:
+                return 'Recession'  # Inverted curve
+            elif long_yield - short_yield > 1:
+                return 'Growth'
+            else:
+                return 'Stable'
+    return 'Unknown'
+
+def compute_key_indicators(data):
+    """Compute real key indicators from data"""
+    spx_ticker = 'SPX Index' if 'SPX Index' in data.columns else None
+    oil_ticker = 'CL1 Comdty' if 'CL1 Comdty' in data.columns else None
+    
+    indicators = {}
+    
+    # Growth: 1Y return of SPX
+    if spx_ticker:
+        spx_series = data[spx_ticker].dropna()
+        if len(spx_series) > 365:
+            end_price = spx_series.iloc[-1]
+            start_price = spx_series.iloc[-366]  # Approx 1Y back
+            growth = ((end_price - start_price) / start_price) * 100
+            growth_delta = growth - (((spx_series.iloc[-31] - spx_series.iloc[-366]) / spx_series.iloc[-366]) * 100)  # Delta vs 1M ago
+            indicators['Growth'] = (f"{growth:.1f}%", f"{growth_delta:.1f}%")
+        else:
+            indicators['Growth'] = ("N/A", "N/A")
+    else:
+        indicators['Growth'] = ("N/A", "N/A")
+    
+    # Inflation: 1Y change in oil price as proxy
+    if oil_ticker:
+        oil_series = data[oil_ticker].dropna()
+        if len(oil_series) > 365:
+            end_price = oil_series.iloc[-1]
+            start_price = oil_series.iloc[-366]
+            inflation = ((end_price - start_price) / start_price) * 100
+            inflation_delta = inflation - (((oil_series.iloc[-31] - oil_series.iloc[-366]) / oil_series.iloc[-366]) * 100)
+            indicators['Inflation'] = (f"{inflation:.1f}%", f"{inflation_delta:.1f}%")
+        else:
+            indicators['Inflation'] = ("N/A", "N/A")
+    else:
+        indicators['Inflation'] = ("N/A", "N/A")
+    
+    # Volatility: 30-day rolling std dev of SPX returns
+    if spx_ticker:
+        returns = compute_returns(data[[spx_ticker]])
+        vol = returns.rolling(window=30).std().iloc[-1][spx_ticker] * np.sqrt(252) * 100  # Annualized
+        prev_vol = returns.rolling(window=30).std().iloc[-2][spx_ticker] * np.sqrt(252) * 100
+        vol_delta = vol - prev_vol
+        indicators['Volatility'] = (f"{vol:.1f}", f"{vol_delta:.1f}")
+    else:
+        indicators['Volatility'] = ("N/A", "N/A")
+    
+    return indicators
+
+def compute_regime_analysis(data):
+    """Compute real regime analysis metrics from data"""
+    spx_ticker = 'SPX Index' if 'SPX Index' in data.columns else None
+    bond_ticker = 'GT10 Govt' if 'GT10 Govt' in data.columns else None
+    oil_ticker = 'CL1 Comdty' if 'CL1 Comdty' in data.columns else None
+    usd_ticker = 'EURUSD Curncy' if 'EURUSD Curncy' in data.columns else None
+    comm_index_ticker = 'GC1 Comdty' if 'GC1 Comdty' in data.columns else None  # Gold as proxy
+    
+    analysis = {}
+    
+    # Equity Momentum: 1M return of SPX
+    if spx_ticker:
+        spx_series = data[spx_ticker].dropna()
+        if len(spx_series) > 30:
+            end = spx_series.iloc[-1]
+            start = spx_series.iloc[-31]
+            momentum = ((end - start) / start) * 100
+            analysis['Equity Momentum'] = (f"{momentum:.1f}%", "↑" if momentum > 0 else "↓")
+        else:
+            analysis['Equity Momentum'] = ("N/A", "→")
+    else:
+        analysis['Equity Momentum'] = ("N/A", "→")
+    
+    # Bond-Equity Correlation: 90-day corr between bond and SPX
+    if spx_ticker and bond_ticker:
+        returns = compute_returns(data[[spx_ticker, bond_ticker]])
+        corr = returns.rolling(90).corr().iloc[-1][spx_ticker]
+        prev_corr = returns.rolling(90).corr().iloc[-2][spx_ticker]
+        delta = "↓" if corr < prev_corr else "↑" if corr > prev_corr else "→"
+        analysis['Bond-Equity Correlation'] = (f"{corr:.2f}", delta)
+    else:
+        analysis['Bond-Equity Correlation'] = ("N/A", "→")
+    
+    # Inflation Expectations: 1M change in oil
+    if oil_ticker:
+        oil_series = data[oil_ticker].dropna()
+        if len(oil_series) > 30:
+            end = oil_series.iloc[-1]
+            start = oil_series.iloc[-31]
+            infl_exp = ((end - start) / start) * 100
+            analysis['Inflation Expectations'] = (f"{infl_exp:.1f}%", "↑" if infl_exp > 0 else "↓")
+        else:
+            analysis['Inflation Expectations'] = ("N/A", "→")
+    else:
+        analysis['Inflation Expectations'] = ("N/A", "→")
+    
+    # Credit Spreads: Placeholder (use 10Y - 2Y spread as proxy)
+    latest_date = data.index.max()
+    yc_data = get_yield_curve_data(data, US_FIXED_INCOME_TICKERS, latest_date)
+    if not yc_data.empty:
+        short = yc_data[yc_data['Maturity'] == '2Y']['Yield'].values[0] if '2Y' in yc_data['Maturity'].values else np.nan
+        long = yc_data[yc_data['Maturity'] == '10Y']['Yield'].values[0] if '10Y' in yc_data['Maturity'].values else np.nan
+        if not np.isnan(short) and not np.isnan(long):
+            spread = (long - short) * 100  # in bps
+            analysis['Credit Spreads'] = (f"{spread:.0f} bps", "→")  # Placeholder delta
+        else:
+            analysis['Credit Spreads'] = ("N/A", "→")
+    else:
+        analysis['Credit Spreads'] = ("N/A", "→")
+    
+    # Dollar Strength: Latest EURUSD (inverse as dollar strength)
+    if usd_ticker:
+        usd = data[usd_ticker].iloc[-1]
+        prev_usd = data[usd_ticker].iloc[-2]
+        delta = "↑" if usd < prev_usd else "↓"  # Lower EURUSD means stronger USD
+        analysis['Dollar Strength'] = (f"{1/usd:.2f}", delta)  # Inverse for strength
+    else:
+        analysis['Dollar Strength'] = ("N/A", "→")
+    
+    # Commodity Index: Gold as proxy
+    if comm_index_ticker:
+        comm = data[comm_index_ticker].iloc[-1]
+        prev_comm = data[comm_index_ticker].iloc[-2]
+        delta = "↑" if comm > prev_comm else "↓"
+        analysis['Commodity Index'] = (f"{comm:.0f}", delta)
+    else:
+        analysis['Commodity Index'] = ("N/A", "→")
+    
+    return analysis
+
 def main():
     st.title("Market Dashboard Skema")
     st.markdown("*Using real price data from GitHub CSV files*")
@@ -204,16 +360,22 @@ def main():
         default=available_assets[:3] if available_assets else []  # Default to first 3 available
     )
     
-    # Market regime indicator (placeholder; can compute from data if needed)
+    # Compute real metrics for sidebar
+    current_regime = compute_market_regime(data)
+    key_indicators = compute_key_indicators(data)
+    
+    # Market regime indicator
     st.sidebar.markdown("### Current Market Regime")
-    current_regime = np.random.choice(['Growth', 'Recession', 'Inflation', 'Deflation'])
     st.sidebar.metric("Regime", current_regime)
     
-    # Key metrics (computed from data if possible; placeholder for now)
+    # Key metrics
     st.sidebar.markdown("### Key Indicators")
-    st.sidebar.metric("Growth", "2.1%", "0.3%")
-    st.sidebar.metric("Inflation", "3.2%", "-0.1%")
-    st.sidebar.metric("Volatility", "18.5", "2.1")
+    growth_val, growth_delta = key_indicators.get('Growth', ("N/A", "N/A"))
+    st.sidebar.metric("Growth", growth_val, growth_delta)
+    infl_val, infl_delta = key_indicators.get('Inflation', ("N/A", "N/A"))
+    st.sidebar.metric("Inflation", infl_val, infl_delta)
+    vol_val, vol_delta = key_indicators.get('Volatility', ("N/A", "N/A"))
+    st.sidebar.metric("Volatility", vol_val, vol_delta)
     
     # Filter data by date
     if len(date_range) == 2:
@@ -309,6 +471,82 @@ def main():
     else:
         st.warning("No US Treasury yield data available.")
     
+    # Forex Dashboard
+    st.header("Forex Dashboard")
+    forex_period = st.selectbox("Select Period for Forex", ['1M', '3M', '6M', '1Y', 'All'], index=4)
+    
+    if forex_period != 'All':
+        if forex_period == '1M':
+            days = 30
+        elif forex_period == '3M':
+            days = 90
+        elif forex_period == '6M':
+            days = 180
+        elif forex_period == '1Y':
+            days = 365
+        forex_end = data.index.max()
+        forex_start = forex_end - timedelta(days=days)
+        forex_data = data.loc[(data.index >= forex_start) & (data.index <= forex_end)]
+    else:
+        forex_data = data
+    
+    forex_cols = st.columns(3)
+    for i, (region, ticker) in enumerate(FOREX_REGIONS.items()):
+        with forex_cols[i]:
+            st.subheader(f"{region} ({ticker})")
+            if ticker in forex_data.columns and not forex_data[ticker].dropna().empty:
+                chart_data = forex_data[[ticker]].copy()
+                st.line_chart(chart_data)
+                latest = forex_data[ticker].iloc[-1]
+                if len(forex_data) > 1:
+                    prev = forex_data[ticker].iloc[-2]
+                    delta = ((latest - prev) / prev) * 100
+                    st.metric("Latest Rate", f"{latest:.4f}", f"{delta:.2f}%")
+                else:
+                    st.metric("Latest Rate", f"{latest:.4f}", "N/A")
+            else:
+                st.warning(f"No data for {ticker}")
+    
+    # Indices Dashboard
+    st.header("Indices Dashboard")
+    indices_period = st.selectbox("Select Period for Indices", ['1M', '3M', '6M', '1Y', 'All'], index=4)
+    
+    if indices_period != 'All':
+        if indices_period == '1M':
+            days = 30
+        elif indices_period == '3M':
+            days = 90
+        elif indices_period == '6M':
+            days = 180
+        elif indices_period == '1Y':
+            days = 365
+        indices_end = data.index.max()
+        indices_start = indices_end - timedelta(days=days)
+        indices_data = data.loc[(data.index >= indices_start) & (data.index <= indices_end)]
+    else:
+        indices_data = data
+    
+    indices_cols = st.columns(3)
+    for i, (region, ticker) in enumerate(INDICES_REGIONS.items()):
+        with indices_cols[i]:
+            st.subheader(f"{region} ({ticker})")
+            if ticker in indices_data.columns and not indices_data[ticker].dropna().empty:
+                chart_data = indices_data[[ticker]].copy()
+                # Normalize for performance
+                first_valid = chart_data[ticker].first_valid_index()
+                if first_valid is not None:
+                    chart_data[ticker] = (chart_data[ticker] / chart_data[ticker].loc[first_valid]) * 100
+                st.line_chart(chart_data)
+                latest = indices_data[ticker].iloc[-1]
+                if len(indices_data) > 1:
+                    prev = indices_data[ticker].iloc[-2]
+                    delta = ((latest - prev) / prev) * 100
+                    st.metric("Latest Level", f"{latest:.2f}", f"{delta:.2f}%")
+                else:
+                    st.metric("Latest Level", f"{latest:.2f}", "N/A")
+            else:
+                st.warning(f"No data for {ticker}")
+    
     # Performance comparison table (calculating returns from prices)
     st.header("Asset Performance Comparison")
     
@@ -359,7 +597,7 @@ def main():
         st.warning("No performance data available.")
     
     # Correlation Matrix
-    st.header("Correlation Matrix (side bar)")
+    st.header("Correlation Matrix")
     if selected_assets and len(selected_assets) >= 2 and not filtered_data.empty:
         returns = compute_returns(filtered_data[selected_assets])
         corr_matrix = compute_correlation_matrix(returns)
@@ -396,22 +634,29 @@ def main():
     else:
         st.warning("No assets available for correlation analysis.")
     
-    # Market Regime Analysis (placeholder)
+    # Market Regime Analysis (computed from real data)
     st.header("Market Regime Analysis")
+    regime_analysis = compute_regime_analysis(data)
     
     col7, col8, col9 = st.columns(3)
     
     with col7:
-        st.metric("Equity Momentum", "Strong", "↑")
-        st.metric("Bond-Equity Correlation", "-0.25", "↓")
+        eq_mom_val, eq_mom_delta = regime_analysis.get('Equity Momentum', ("N/A", "→"))
+        st.metric("Equity Momentum", eq_mom_val, eq_mom_delta)
+        bond_eq_corr_val, bond_eq_corr_delta = regime_analysis.get('Bond-Equity Correlation', ("N/A", "→"))
+        st.metric("Bond-Equity Correlation", bond_eq_corr_val, bond_eq_corr_delta)
     
     with col8:
-        st.metric("Inflation Expectations", "2.8%", "↑")
-        st.metric("Credit Spreads", "145 bps", "→")
+        infl_exp_val, infl_exp_delta = regime_analysis.get('Inflation Expectations', ("N/A", "→"))
+        st.metric("Inflation Expectations", infl_exp_val, infl_exp_delta)
+        credit_spread_val, credit_spread_delta = regime_analysis.get('Credit Spreads', ("N/A", "→"))
+        st.metric("Credit Spreads", credit_spread_val, credit_spread_delta)
     
     with col9:
-        st.metric("Dollar Strength", "102.5", "↑")
-        st.metric("Commodity Index", "485", "↓")
+        dollar_str_val, dollar_str_delta = regime_analysis.get('Dollar Strength', ("N/A", "→"))
+        st.metric("Dollar Strength", dollar_str_val, dollar_str_delta)
+        comm_index_val, comm_index_delta = regime_analysis.get('Commodity Index', ("N/A", "→"))
+        st.metric("Commodity Index", comm_index_val, comm_index_delta)
     
     # Footer
     st.markdown("---")
@@ -420,4 +665,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
