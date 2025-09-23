@@ -286,10 +286,16 @@ def main():
     if US_FIXED_INCOME_TICKERS and any(t in data.columns for t in US_FIXED_INCOME_TICKERS):
         us_yc_data = get_yield_curve_data(data, US_FIXED_INCOME_TICKERS, yc_datetime)
         if not us_yc_data.empty:
-            # Custom Altair chart for explicit x-order (shortest to longest)
+            # Calculate dynamic y-axis domain with padding for auto-zoom
+            min_yield = us_yc_data['Yield'].min()
+            max_yield = us_yc_data['Yield'].max()
+            padding = 0.5  # Adjust this value (e.g., 0.2 for tighter zoom, 1.0 for more space)
+            y_domain = [min_yield - padding, max_yield + padding]
+            
+            # Custom Altair chart for explicit x-order (shortest to longest) and auto-zoomed y-axis
             yc_chart = alt.Chart(us_yc_data).mark_line(point=True).encode(
                 x=alt.X('Maturity:N', sort=None, title='Maturity'),  # Use 'Maturity' column, respect DataFrame order
-                y=alt.Y('Yield:Q', title='Yield (%)'),
+                y=alt.Y('Yield:Q', title='Yield (%)', scale=alt.Scale(domain=y_domain)),  # Dynamic y-scale
                 tooltip=['Maturity', 'Yield']
             ).properties(
                 width=700,
