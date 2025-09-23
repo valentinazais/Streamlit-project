@@ -23,7 +23,7 @@ TICKERS = {
         'CL1 Comdty', 'GC1 Comdty', 'NG1 Comdty', 'XAUEUR Curncy'
     ],
     'Indices': [
-        'INDU Index', 'NDX Index', 'SPX Index', 'CAC Index'
+        'INDU Index', 'NDX Index', 'SPX Index', 'CAC Index', 'TPX Index'
     ],
     'Fixed Income': [
         'GB3 Govt', 'GB6 Govt', 'GB12 Govt', 'GT2 Govt', 'GT5 Govt', 'GT10 Govt', 'GT30 Govt'
@@ -709,6 +709,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
