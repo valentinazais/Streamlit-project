@@ -46,7 +46,7 @@ FOREX_REGIONS = {
 INDICES_REGIONS = {
     'US': 'SPX Index',    # SPX for US
     'EMEA': 'CAC Index',  # CAC for EMEA
-    'Asia': 'TPX500 Index'   # Placeholder; TPX500 not available, using NDX (adjust CSV if needed)
+    'Asia': 'TPX Index'   # Placeholder; TPX500 not available, using NDX (adjust CSV if needed)
 }
 
 def load_and_process_csv(url, expected_tickers=None):
@@ -709,6 +709,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
