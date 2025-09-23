@@ -495,15 +495,36 @@ def main():
         with forex_cols[i]:
             st.subheader(f"{region} ({ticker})")
             if ticker in forex_data.columns and not forex_data[ticker].dropna().empty:
-                chart_data = forex_data[[ticker]].copy()
-                st.line_chart(chart_data)
+                # Prepare data for Altair (reset index for 'Date')
+                chart_data = forex_data[[ticker]].reset_index().melt('Dates', var_name='Ticker', value_name='Rate')
+                chart_data = chart_data.dropna(subset=['Rate'])
+                
+                # Calculate dynamic y-domain with padding
+                min_rate = chart_data['Rate'].min()
+                max_rate = chart_data['Rate'].max()
+                padding = (max_rate - min_rate) * 0.05  # 5% padding relative to range
+                if padding == 0: padding = 0.01  # Small padding if flat
+                y_domain = [min_rate - padding, max_rate + padding]
+                
+                # Altair chart with auto-fit y-axis
+                forex_chart = alt.Chart(chart_data).mark_line(point=True).encode(
+                    x=alt.X('Dates:T', title='Date'),
+                    y=alt.Y('Rate:Q', title='Rate', scale=alt.Scale(domain=y_domain)),
+                    tooltip=['Dates', 'Rate']
+                ).properties(
+                    height=300,
+                    title=f"{ticker} Rate"
+                ).interactive()
+                
+                st.altair_chart(forex_chart, use_container_width=True)
+                
                 latest = forex_data[ticker].iloc[-1]
                 if len(forex_data) > 1:
                     prev = forex_data[ticker].iloc[-2]
                     delta = ((latest - prev) / prev) * 100
-                    st.metric("Latest Rate", f"{latest:.4f}", f"{delta:.2f}%")
+                    st.metric(f"Latest Rate for {region} ({ticker})", f"{latest:.4f}", f"{delta:.2f}%")
                 else:
-                    st.metric("Latest Rate", f"{latest:.4f}", "N/A")
+                    st.metric(f"Latest Rate for {region} ({ticker})", f"{latest:.4f}", "N/A")
             else:
                 st.warning(f"No data for {ticker}")
     
@@ -531,19 +552,42 @@ def main():
         with indices_cols[i]:
             st.subheader(f"{region} ({ticker})")
             if ticker in indices_data.columns and not indices_data[ticker].dropna().empty:
-                chart_data = indices_data[[ticker]].copy()
                 # Normalize for performance
+                chart_data = indices_data[[ticker]].copy()
                 first_valid = chart_data[ticker].first_valid_index()
                 if first_valid is not None:
                     chart_data[ticker] = (chart_data[ticker] / chart_data[ticker].loc[first_valid]) * 100
-                st.line_chart(chart_data)
+                
+                # Prepare data for Altair (reset index for 'Date')
+                chart_data = chart_data.reset_index().melt('Dates', var_name='Ticker', value_name='Normalized Level')
+                chart_data = chart_data.dropna(subset=['Normalized Level'])
+                
+                # Calculate dynamic y-domain with padding
+                min_level = chart_data['Normalized Level'].min()
+                max_level = chart_data['Normalized Level'].max()
+                padding = (max_level - min_level) * 0.05  # 5% padding relative to range
+                if padding == 0: padding = 1  # Small padding if flat
+                y_domain = [min_level - padding, max_level + padding]
+                
+                # Altair chart with auto-fit y-axis
+                indices_chart = alt.Chart(chart_data).mark_line(point=True).encode(
+                    x=alt.X('Dates:T', title='Date'),
+                    y=alt.Y('Normalized Level:Q', title='Normalized Level (100 at start)', scale=alt.Scale(domain=y_domain)),
+                    tooltip=['Dates', 'Normalized Level']
+                ).properties(
+                    height=300,
+                    title=f"{ticker} Performance"
+                ).interactive()
+                
+                st.altair_chart(indices_chart, use_container_width=True)
+                
                 latest = indices_data[ticker].iloc[-1]
                 if len(indices_data) > 1:
                     prev = indices_data[ticker].iloc[-2]
                     delta = ((latest - prev) / prev) * 100
-                    st.metric("Latest Level", f"{latest:.2f}", f"{delta:.2f}%")
+                    st.metric(f"Latest Level for {region} ({ticker})", f"{latest:.2f}", f"{delta:.2f}%")
                 else:
-                    st.metric("Latest Level", f"{latest:.2f}", "N/A")
+                    st.metric(f"Latest Level for {region} ({ticker})", f"{latest:.2f}", "N/A")
             else:
                 st.warning(f"No data for {ticker}")
     
