@@ -1,3 +1,16 @@
+# # Check changes
+# git status
+
+# # Add changes
+# git add main.py
+
+# # Commit changes
+# git commit -m "Update main.py"
+
+# # Push to GitHub
+# git push origin main
+
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -326,7 +339,7 @@ def compute_regime_analysis(data):
     return analysis
 
 def main():
-    st.title("Market Dashboard Skema")
+    st.title("Market Dashboard Skemafzfzerrefzfzf")
     st.markdown("*Using real price data from GitHub CSV files*")
     
     # Load real data
