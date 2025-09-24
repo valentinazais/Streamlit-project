@@ -326,7 +326,7 @@ def compute_regime_analysis(data):
     return analysis
 
 def main():
-    st.title("Market Dashboard Skemaaaaaa")
+    st.title("Market Dashboard Skema")
     st.markdown("*Using real price data from GitHub CSV files*")
     
     # Load real data
